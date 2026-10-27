@@ -22,7 +22,17 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - name: Build (compile check)
-        run: dotnet build LightIsland.csproj -c Release -warnaserror- -nologo
+        shell: pwsh
+        run: |
+          dotnet build LightIsland.csproj -c Release -nologo 2>&1 | Tee-Object -FilePath build.log
+          $code = $LASTEXITCODE
+          if ($code -ne 0) {
+            # show every error as one annotation (readable without opening the log)
+            $errs = Select-String -Path build.log -Pattern ': error ' | ForEach-Object { $_.Line.Trim() } | Sort-Object -Unique | Select-Object -First 60
+            $msg = ($errs -join "%0A")
+            Write-Host "::error title=Compile errors::$msg"
+          }
+          exit $code
 
   package:
     if: github.event_name == 'workflow_dispatch' && inputs.package
