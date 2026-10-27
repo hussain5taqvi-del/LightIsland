@@ -48,7 +48,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: Fetch voice engines
         shell: pwsh
-        run: ./tools/get-voice.ps1 -Release "$PWD/probe"
+        run: |
+          try {
+            ./tools/get-voice.ps1 -Release "$PWD/probe" *>&1 | Tee-Object -Variable log | Out-Host
+          } catch {
+            $m = ($_ | Out-String) + "`n" + (($log | Out-String))
+            Write-Host ("::error title=FetchError::" + ($m -replace "`r","" -replace "%","%25" -replace "`n","%0A"))
+            exit 1
+          }
       - name: Probe whisper + llama
         shell: pwsh
         run: |
