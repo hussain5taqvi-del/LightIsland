@@ -250,3 +250,12 @@ FFmpeg, Pandoc, Ghostscript, 7-Zip, rhwp and yt-dlp are separate programs under 
 
 ## 1.4.3
 - Settings → General → **Record animation timing**: while on, every animation is measured frame by frame and written to `%AppData%\LightIsland\perf.log` (render mode, dropped frames, CPU, RAM). Off by default; send the file to get lag fixed with real numbers.
+
+## 1.5.0 – offline voice commands
+Hold the **voice key** (default **Caps Lock**, change it in Settings → General → "Voice key"), say what you want, let go: it is done. No internet is needed for the listening and understanding, no account, no API key, nothing to install: the models come with the app.
+
+- Speech to text: whisper.cpp + OpenAI Whisper *base* (MIT). Understanding: simple rules first (instant), then Qwen2.5-1.5B-Instruct (Apache-2.0) through llama.cpp (MIT) for everything else. Both run in helper programs that exit afterwards, so the island stays inside its memory limit; the PC's free RAM is used for 2-4 seconds while they work.
+- Examples: "open calculator", "open YouTube", "play the MrBeast video from two days ago", "volume 40", "mute", "next song", "timer for 10 minutes", "search weather in Karachi", "look up zinger burger on Foodpanda".
+- Anything that opens something (a website, an app, YouTube, a search) first shows a small card: **Allow once**, **Always allow** (per kind of action) or **Cancel**. Volume, media keys and timers just happen. Nothing is ever bought or ordered: Foodpanda only opens its search results. Settings → "Voice permissions → Reset" forgets every "Always allow".
+- The voice key and the file-ring key must differ. Caps Lock is swallowed while it is the voice key (it will not toggle capitals).
+- `build.bat novoice` builds without the voice engines (about 1.3 GB smaller). Licences: see `voice\NOTICE.txt`.

@@ -105,6 +105,9 @@ jobs:
       - name: Engines (yt-dlp, deno, Filee)
         shell: pwsh
         run: ./tools/get-engines.ps1 -Release "$PWD/release"
+      - name: Voice engines (whisper, Qwen)
+        shell: pwsh
+        run: ./tools/get-voice.ps1 -Release "$PWD/release"
       - name: Smoke test (Filee CLI + yt-dlp)
         shell: pwsh
         run: |
@@ -121,6 +124,7 @@ jobs:
           $out += "--- convert png->webp"
           $out += (& $f convert "$PWD/t.png" --to webp --json 2>&1 | Out-String)
           $out += "exit " + $LASTEXITCODE
+          $out += "voice: " + ((Get-ChildItem release/voice -Recurse -Filter *.exe | ForEach-Object { $_.Name }) -join ', ')
           $out += "--- yt-dlp"
           $out += (& release/engines/yt-dlp.exe --version 2>&1 | Out-String)
           $out += (& release/engines/deno.exe --version 2>&1 | Out-String)

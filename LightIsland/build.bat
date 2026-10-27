@@ -16,12 +16,24 @@ echo.
 echo Fetching built-in tools (yt-dlp, ffmpeg, Filee converter). First time takes a few minutes...
 set FULLFLAG=
 if /i "%~1"=="full" set FULLFLAG=-Full
+if /i "%~2"=="full" set FULLFLAG=-Full
 powershell -NoProfile -ExecutionPolicy Bypass -File "tools\get-engines.ps1" -Release "%cd%\release" %FULLFLAG%
 if errorlevel 1 (
     echo.
     echo Fetching the tools failed. Check your internet and run build.bat again.
     pause
     exit /b 1
+)
+if /i not "%~1"=="novoice" (
+    echo.
+    echo Fetching the offline voice engines (speech + AI model, about 1.3 GB, first time only)...
+    powershell -NoProfile -ExecutionPolicy Bypass -File "tools\get-voice.ps1" -Release "%cd%\release"
+    if errorlevel 1 (
+        echo.
+        echo Fetching the voice engines failed. Check your internet and run build.bat again, or run: build.bat novoice
+        pause
+        exit /b 1
+    )
 )
 for /f %%H in ('certutil -hashfile "release\LightIsland.exe" SHA256 ^| findstr /r /x "[0-9a-fA-F][0-9a-fA-F]*"') do echo %%H  LightIsland.exe > release\SHA256.txt
 echo.

@@ -312,6 +312,38 @@
                     <Border Height="1" Background="{StaticResource Hairline}" Margin="16,0,0,0" />
                     <Grid Margin="14,9">
                         <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Voice commands" Foreground="White" />
+                            <TextBlock Text="Hold the voice key, speak, let go. Works offline." Foreground="#99EBEBF5" FontSize="11" Margin="0,2,0,0" />
+                        </StackPanel>
+                        <CheckBox x:Name="VoiceCheck" Style="{StaticResource Switch}" HorizontalAlignment="Right"
+                                  Checked="Voice_Changed" Unchecked="Voice_Changed" />
+                    </Grid>
+                    <Border Height="1" Background="{StaticResource Hairline}" Margin="16,0,0,0" />
+                    <Grid Margin="14,9">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Voice key" Foreground="White" />
+                            <TextBlock Text="Caps Lock, Ctrl, F-keys ... any key you like." Foreground="#99EBEBF5" FontSize="11" Margin="0,2,0,0" />
+                        </StackPanel>
+                        <Border x:Name="VoiceKeyBtn" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="64" CornerRadius="9"
+                                Padding="12,5" Background="#2C2C2E" Cursor="Hand" ToolTip="Click, then press the key you want"
+                                MouseLeftButtonUp="VoiceKey_Click">
+                            <TextBlock x:Name="VoiceKeyText" Foreground="White" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                        </Border>
+                    </Grid>
+                    <Border Height="1" Background="{StaticResource Hairline}" Margin="16,0,0,0" />
+                    <Grid Margin="14,9">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Voice permissions" Foreground="White" />
+                            <TextBlock Text="Forget every “Always allow” you chose." Foreground="#99EBEBF5" FontSize="11" Margin="0,2,0,0" />
+                        </StackPanel>
+                        <Border HorizontalAlignment="Right" VerticalAlignment="Center" CornerRadius="9" Padding="12,5" Background="#2C2C2E"
+                                Cursor="Hand" MouseLeftButtonUp="VoiceReset_Click">
+                            <TextBlock x:Name="VoiceResetText" Text="Reset" Foreground="White" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                        </Border>
+                    </Grid>
+                    <Border Height="1" Background="{StaticResource Hairline}" Margin="16,0,0,0" />
+                    <Grid Margin="14,9">
+                        <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="Record animation timing" Foreground="White" />
                             <TextBlock Text="For fixing lag: writes %AppData%\LightIsland\perf.log" Foreground="#99EBEBF5" FontSize="11" Margin="0,2,0,0" />
                         </StackPanel>

@@ -23,7 +23,7 @@ function Get-File($url, $name) {
     return $p
 }
 
-function Unpack($zip, $dest) {
+function Unpack($zip, $dest, $keep) {
     if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
     $tmp = Join-Path $cache ('x-' + [IO.Path]::GetFileNameWithoutExtension($zip))
     if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
@@ -32,6 +32,8 @@ function Unpack($zip, $dest) {
     # flatten: the folder that holds the .exe files
     $exe = Get-ChildItem $tmp -Recurse -Filter *.exe | Select-Object -First 1
     Copy-Item (Join-Path $exe.Directory.FullName '*') $dest -Recurse -Force
+    # only the programs LightIsland starts stay (the rest are tests and tools, hundreds of MB)
+    Get-ChildItem $dest -Filter *.exe | Where-Object { $keep -notcontains $_.Name } | Remove-Item -Force
 }
 
 Write-Host '[voice 1/4] whisper.cpp'
@@ -44,7 +46,7 @@ foreach ($rel in (Invoke-RestMethod -Uri 'https://api.github.com/repos/ggml-org/
     if ($a) { break }
 }
 if (-not $a) { throw ('whisper.cpp: no Windows x64 zip. Releases seen: ' + ($names -join ' | ')) }
-Unpack (Get-File $a.browser_download_url $a.name) (Join-Path $voice 'whisper')
+Unpack (Get-File $a.browser_download_url $a.name) (Join-Path $voice 'whisper') @('whisper-cli.exe')
 
 Write-Host '[voice 2/4] llama.cpp'
 $a = $null
@@ -58,7 +60,7 @@ foreach ($rel in (Invoke-RestMethod -Uri 'https://api.github.com/repos/ggml-org/
 }
 if (-not $a) { throw ('llama.cpp: no Windows CPU zip. Releases seen: ' + ($names -join ' | ')) }
 Write-Host ('  using ' + $a.name)
-Unpack (Get-File $a.browser_download_url $a.name) (Join-Path $voice 'llama')
+Unpack (Get-File $a.browser_download_url $a.name) (Join-Path $voice 'llama') @('llama-completion.exe', 'llama-cli.exe')
 
 Write-Host '[voice 3/4] speech model'
 $models = Join-Path $voice 'models'

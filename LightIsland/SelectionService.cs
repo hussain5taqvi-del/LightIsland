@@ -83,6 +83,13 @@ internal sealed class SelectionService : IDisposable
     /// <summary>Raised on the UI thread when the held key is let go.</summary>
     public event Action? KeyReleased;
 
+    /// <summary>The key that is held to speak a command (works in every program). Raised on the UI thread.</summary>
+    public volatile int VoiceVk = 0x14; // Caps Lock
+    public volatile bool VoiceEnabled = true;
+    public event Action? VoiceDown, VoiceUp, VoiceCancel;
+    private volatile bool _voiceHeld;
+    private long _voiceTick;
+
     private volatile bool _held, _cancel;
     private long _holdId, _lastTick;
 
@@ -114,6 +121,43 @@ internal sealed class SelectionService : IDisposable
                     int trig = TriggerVk;
                     bool mod = IsModifier(trig);
                     long now = Environment.TickCount64;
+
+                    // Voice key: hold, speak, let go. A letter-like key (Caps Lock ...) is swallowed so it does nothing else;
+                    // a modifier key (Ctrl, Alt ...) is never swallowed.
+                    int vv = VoiceVk;
+                    if (VoiceEnabled && vv != trig)
+                    {
+                        bool vmod = IsModifier(vv);
+                        if (vk == vv)
+                        {
+                            if (down)
+                            {
+                                if (_voiceHeld && now - _voiceTick < 1500)
+                                {
+                                    _voiceTick = now;
+                                    return vmod ? CallNextHookEx(_hook, code, wParam, lParam) : (IntPtr)1;
+                                }
+                                if (!OtherModifierDown(vv))
+                                {
+                                    _voiceHeld = true;
+                                    _voiceTick = now;
+                                    _ui.BeginInvoke(new Action(() => VoiceDown?.Invoke()));
+                                    if (!vmod) return (IntPtr)1;
+                                }
+                            }
+                            else if (up && _voiceHeld)
+                            {
+                                _voiceHeld = false;
+                                _ui.BeginInvoke(new Action(() => VoiceUp?.Invoke()));
+                                if (!vmod) return (IntPtr)1;
+                            }
+                        }
+                        else if (down && _voiceHeld && vmod)
+                        {
+                            _voiceHeld = false; // Ctrl+C and the like: a shortcut, not a voice command
+                            _ui.BeginInvoke(new Action(() => VoiceCancel?.Invoke()));
+                        }
+                    }
 
                     if (vk == trig)
                     {

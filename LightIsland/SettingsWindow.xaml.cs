@@ -38,7 +38,8 @@ public partial class SettingsWindow : Window
         FahrCheck.IsChecked = _s.UseFahrenheit;
         Hour24Check.IsChecked = _s.Use24Hour;
         StartupCheck.IsChecked = StartupManager.IsEnabled;
-        RingKeyText.Text = KeyName(_s.RingKey);
+        ShowKeyNames();
+        VoiceCheck.IsChecked = _s.VoiceEnabled;
         PerfCheck.IsChecked = _s.PerfLog;
         _ready = true;
     }
@@ -389,7 +390,7 @@ public partial class SettingsWindow : Window
 
     // ---------- File ring key ----------
 
-    private bool _capturingKey;
+    private int _captureTarget; // 0 = none, 1 = ring key, 2 = voice key
 
     private static string KeyName(int vk)
     {
@@ -403,6 +404,7 @@ public partial class SettingsWindow : Window
             case 0xA5: return "Right Alt";
             case 0x5B: return "Left Win";
             case 0x5C: return "Right Win";
+            case 0x14: return "Caps Lock";
             case 0x20: return "Space";
             case 0xC0: return "` (backtick)";
         }
@@ -413,31 +415,46 @@ public partial class SettingsWindow : Window
 
     private void RingKey_Click(object sender, MouseButtonEventArgs e)
     {
-        _capturingKey = true;
+        _captureTarget = 1;
         RingKeyText.Text = "Press a key...";
         Focus();
     }
 
+    private void VoiceKey_Click(object sender, MouseButtonEventArgs e)
+    {
+        _captureTarget = 2;
+        VoiceKeyText.Text = "Press a key...";
+        Focus();
+    }
+
+    private void ShowKeyNames()
+    {
+        RingKeyText.Text = KeyName(_s.RingKey);
+        VoiceKeyText.Text = KeyName(_s.VoiceKey);
+    }
+
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
-        if (_capturingKey)
+        if (_captureTarget != 0)
         {
             e.Handled = true;
             Key k = e.Key == Key.System ? e.SystemKey : e.Key == Key.ImeProcessed ? e.ImeProcessedKey : e.Key;
             if (k == Key.None) return;
-            _capturingKey = false;
-            if (k == Key.Escape) { RingKeyText.Text = KeyName(_s.RingKey); return; }
+            int target = _captureTarget;
+            _captureTarget = 0;
+            if (k == Key.Escape) { ShowKeyNames(); return; }
 
             int vk = KeyInterop.VirtualKeyFromKey(k);
-            if (vk < 8 || vk > 254 || k == Key.Tab || k == Key.Enter)
+            int other = target == 1 ? _s.VoiceKey : _s.RingKey;
+            if (vk < 8 || vk > 254 || k == Key.Tab || k == Key.Enter || vk == other)
             {
-                RingKeyText.Text = KeyName(_s.RingKey);
+                ShowKeyNames(); // not allowed, or the same key as the other shortcut
                 return;
             }
-            _s.RingKey = vk;
+            if (target == 1) _s.RingKey = vk; else _s.VoiceKey = vk;
             _s.Save();
             _main.ApplyTaskSettings();
-            RingKeyText.Text = KeyName(vk);
+            ShowKeyNames();
             return;
         }
         base.OnPreviewKeyDown(e);
@@ -446,7 +463,22 @@ public partial class SettingsWindow : Window
     protected override void OnDeactivated(EventArgs e)
     {
         base.OnDeactivated(e);
-        if (_capturingKey) { _capturingKey = false; RingKeyText.Text = KeyName(_s.RingKey); }
+        if (_captureTarget != 0) { _captureTarget = 0; ShowKeyNames(); }
+    }
+
+    private void Voice_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_ready) return;
+        _s.VoiceEnabled = VoiceCheck.IsChecked == true;
+        _s.Save();
+        _main.ApplyTaskSettings();
+    }
+
+    private void VoiceReset_Click(object sender, MouseButtonEventArgs e)
+    {
+        _s.VoiceAllow.Clear();
+        _s.Save();
+        VoiceResetText.Text = "Done: it asks again";
     }
 
     private void Perf_Changed(object sender, RoutedEventArgs e)
