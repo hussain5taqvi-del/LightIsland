@@ -104,6 +104,7 @@ public partial class MainWindow
 
         WxContent.Visibility = has ? Visibility.Visible : Visibility.Collapsed;
         WxHint.Visibility = has ? Visibility.Collapsed : Visibility.Visible;
+        WxDivider.Visibility = has ? Visibility.Visible : Visibility.Collapsed;
 
         // Collapsed island: with weather the time and the weather get two equal halves (divider in the middle);
         // without weather only the time is shown, centered
@@ -277,9 +278,6 @@ public partial class MainWindow
         SysDskS.Text = r.DiskName + " " + r.DiskUsedGb.ToString("0", InvC) + " / " + r.DiskTotalGb.ToString("0", InvC) + " GB";
         SetBar(SysDskSc, r.DiskPct / 100.0);
 
-        SysNetV.Text = r.Primed ? "\u2193 " + Rate(r.DownBps) : "\u2026";
-        SysNetS.Text = r.Primed ? "\u2191 " + Rate(r.UpBps) : " ";
-
         ShowGpu();
     }
 
@@ -348,6 +346,70 @@ public partial class MainWindow
                 SpdV.Text = "Failed";
                 SpdS.Text = "No internet?";
                 break;
+        }
+    }
+
+    // ---------- Clean (temp files, caches, recycle bin, DNS) ----------
+
+    private bool _cleanBusy, _cleanArmed;
+    private int _cleanToken;
+
+    private static string Size(long b)
+    {
+        if (b >= 1L << 30) return (b / (double)(1L << 30)).ToString("0.0", InvC) + " GB";
+        if (b >= 1L << 20) return (b / (double)(1L << 20)).ToString("0", InvC) + " MB";
+        if (b >= 1L << 10) return (b / (double)(1L << 10)).ToString("0", InvC) + " KB";
+        return b.ToString(InvC) + " B";
+    }
+
+    private async void Clean_Click(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        if (_cleanBusy) return;
+
+        // First click only asks (the Recycle Bin is emptied for good); a second click inside 4 s cleans
+        if (!_cleanArmed)
+        {
+            _cleanArmed = true;
+            int t = ++_cleanToken;
+            CleanBtnText.Text = "Sure?";
+            CleanS.Text = "Empties recycle bin";
+            await Task.Delay(4000);
+            if (t == _cleanToken && _cleanArmed && !_cleanBusy)
+            {
+                _cleanArmed = false;
+                CleanBtnText.Text = "Clean";
+                CleanS.Text = "Temp, cache, bin";
+            }
+            return;
+        }
+
+        _cleanArmed = false;
+        _cleanToken++;
+        _cleanBusy = true;
+        CleanBtnText.Text = "Cleaning\u2026";
+        CleanBtn.Opacity = 0.6;
+        CleanV.Text = "\u2026";
+        CleanS.Text = "Please wait";
+
+        try
+        {
+            var r = await Cleaner.RunAsync();
+            CleanV.Text = Size(r.Bytes);
+            CleanS.Text = r.Files.ToString(InvC) + " files removed";
+        }
+        catch
+        {
+            CleanV.Text = "Failed";
+            CleanS.Text = "Try again";
+        }
+        finally
+        {
+            _cleanBusy = false;
+            CleanBtnText.Text = "Clean";
+            CleanBtn.Opacity = 1;
+            _trimTimer.Stop();
+            _trimTimer.Start(); // give the memory back afterwards
         }
     }
 

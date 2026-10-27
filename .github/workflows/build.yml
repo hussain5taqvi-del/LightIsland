@@ -1,0 +1,47 @@
+name: build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "Also build the full release folder (engines, Filee) and upload it"
+        type: boolean
+        default: false
+
+jobs:
+  compile:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: LightIsland
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build (compile check)
+        run: dotnet build LightIsland.csproj -c Release -warnaserror- -nologo
+
+  package:
+    if: github.event_name == 'workflow_dispatch' && inputs.package
+    needs: compile
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: LightIsland
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Publish
+        run: dotnet publish LightIsland.csproj -c Release -r win-x64 --self-contained true -p:PublishReadyToRun=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -o release
+      - name: Engines (yt-dlp, deno, Filee)
+        shell: pwsh
+        run: ./tools/get-engines.ps1 -Release "$PWD/release"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LightIsland-release
+          path: LightIsland/release

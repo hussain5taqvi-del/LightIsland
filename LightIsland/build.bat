@@ -12,9 +12,21 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
+echo.
+echo Fetching built-in tools (yt-dlp, ffmpeg, Filee converter). First time takes a few minutes...
+set FULLFLAG=
+if /i "%~1"=="full" set FULLFLAG=-Full
+powershell -NoProfile -ExecutionPolicy Bypass -File "tools\get-engines.ps1" -Release "%cd%\release" %FULLFLAG%
+if errorlevel 1 (
+    echo.
+    echo Fetching the tools failed. Check your internet and run build.bat again.
+    pause
+    exit /b 1
+)
 for /f %%H in ('certutil -hashfile "release\LightIsland.exe" SHA256 ^| findstr /r /x "[0-9a-fA-F][0-9a-fA-F]*"') do echo %%H  LightIsland.exe > release\SHA256.txt
 echo.
-echo Done! One file: %cd%\release\LightIsland.exe
-echo Copy it to any PC and double click. No internet, no .NET, nothing else needed.
+echo Done! Folder: %cd%\release
+echo Copy the WHOLE release folder to any PC and run LightIsland.exe. Nothing to download or install.
+echo (build.bat full = also bundles LibreOffice, calibre and OCR for the rarest document formats, much bigger.)
 echo.
 pause

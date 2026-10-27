@@ -13,7 +13,7 @@ using System.Windows.Media.Imaging;
 
 namespace LightIsland;
 
-public enum WallSource { MoeWalls, DesktopHut, FourK }
+public enum WallSource { MoeWalls, DesktopHut, FourK, Wallhaven }
 
 /// <summary>One wallpaper shown as a card in the Wallpapers window.</summary>
 public sealed class WallItem
@@ -22,13 +22,15 @@ public sealed class WallItem
     public string Title { get; init; } = "";
     public string PageUrl { get; init; } = "";
     public string? ThumbUrl { get; set; }
-    public bool IsLive => Source != WallSource.FourK;
+    public string FullUrl { get; set; } = "";     // Wallhaven: the direct link to the full size picture
+    public string Resolution { get; set; } = "";  // Wallhaven: for example 3840x2160
+    public bool IsLive => Source == WallSource.MoeWalls || Source == WallSource.DesktopHut;
 }
 
 public sealed record DownloadInfo(string Url, string Referer, string FileName);
 
 /// <summary>
-/// Wallpapers: reads the public pages of moewalls.com, desktophut.com (live) and 4kwallpapers.com (static),
+/// Wallpapers: reads the public pages of moewalls.com, desktophut.com (live) and 4kwallpapers.com (static; wallhaven.cc is used automatically when 4kwallpapers.com refuses),
 /// downloads the chosen file into %AppData%\LightIsland\Wallpapers and sets it.
 /// Nothing runs until the Wallpapers window is opened. Thumbnails are small and only kept in memory.
 /// </summary>
@@ -60,19 +62,186 @@ public static class WallpaperService
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36");
         c.DefaultRequestHeaders.Accept.ParseAdd("text/html,application/xhtml+xml,*/*;q=0.8");
         c.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
+        // Look like a normal Chrome page visit (some sites answer 403 Forbidden to anything that does not)
+        c.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua", "\"Chromium\";v=\"124\", \"Google Chrome\";v=\"124\", \"Not-A.Brand\";v=\"99\"");
+        c.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-mobile", "?0");
+        c.DefaultRequestHeaders.TryAddWithoutValidation("sec-ch-ua-platform", "\"Windows\"");
+        c.DefaultRequestHeaders.TryAddWithoutValidation("Upgrade-Insecure-Requests", "1");
+        c.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Dest", "document");
+        c.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Mode", "navigate");
+        c.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-Site", "none");
+        c.DefaultRequestHeaders.TryAddWithoutValidation("Sec-Fetch-User", "?1");
         return c;
     }
 
     private static async Task<string> GetHtmlAsync(string url, CancellationToken ct)
     {
-        using var resp = await Http.GetAsync(url, ct).ConfigureAwait(false);
+        // Second try with another browser identity if the site refuses the first one (403 / 429 / 503)
+        for (int attempt = 0; attempt < 2; attempt++)
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, url);
+            if (attempt == 1)
+            {
+                req.Headers.UserAgent.Clear();
+                req.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0");
+                req.Headers.Referrer = new Uri("https://www.google.com/");
+            }
+            using var resp = await Http.SendAsync(req, ct).ConfigureAwait(false);
+            int code = (int)resp.StatusCode;
+            if (resp.IsSuccessStatusCode) return await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            if (attempt == 0 && (code == 403 || code == 429 || code == 503))
+            {
+                await Task.Delay(700, ct).ConfigureAwait(false);
+                continue;
+            }
+            resp.EnsureSuccessStatusCode();
+        }
+        throw new HttpRequestException("The wallpaper site did not answer.");
+    }
+
+    // ---------- Never show an error if there is any other way: 4kwallpapers -> Wallhaven -> last saved list ----------
+
+    private static DateTime _fourKDownUntil = DateTime.MinValue;
+
+    public static async Task<List<WallItem>> BrowseSmartAsync(int page, string catPath, CancellationToken ct)
+    {
+        string key = (catPath ?? "") + "|" + page;
+        Exception? err = null;
+
+        if (DateTime.UtcNow >= _fourKDownUntil)
+        {
+            try
+            {
+                var l = await BrowseAsync(WallSource.FourK, "", page, ct, catPath).ConfigureAwait(false);
+                if (l.Count > 0) SaveCache("4k|" + key, l);
+                return l;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+            catch (Exception ex)
+            {
+                err = ex;
+                _fourKDownUntil = DateTime.UtcNow.AddMinutes(10); // the site refuses us: go straight to the other source for a while
+            }
+        }
+
+        try
+        {
+            var l = await BrowseWallhavenAsync(catPath ?? "", page, ct).ConfigureAwait(false);
+            if (l.Count > 0) SaveCache("wh|" + key, l);
+            return l;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (Exception ex) { err ??= ex; }
+
+        var cached = LoadCache("wh|" + key) ?? LoadCache("4k|" + key);
+        if (cached != null && cached.Count > 0) return cached;
+        throw err ?? new HttpRequestException("No wallpapers could be loaded.");
+    }
+
+    private static (string q, string cats, string sort, string range) WhMap(string slug)
+    {
+        switch (slug)
+        {
+            case "": return ("", "111", "date_added", "");
+            case "most-popular-4k-wallpapers": return ("", "111", "toplist", "1M");
+            case "best-4k-wallpapers": return ("", "111", "favorites", "");
+            case "anime": return ("", "010", "toplist", "1y");
+            case "people": return ("", "001", "toplist", "1y");
+            case "black-dark": return ("dark", "111", "toplist", "1y");
+            case "graphics-cgi": return ("cgi", "111", "toplist", "1y");
+            case "celebrations": return ("celebration", "111", "toplist", "1y");
+            case "gradients": return ("gradient", "111", "toplist", "1y");
+            case "world": return ("world", "111", "toplist", "1y");
+            default: return (slug.Replace('-', ' '), "111", "toplist", "1y");
+        }
+    }
+
+    // wallhaven.cc public API (safe-for-work pictures only, no key needed)
+    private static async Task<List<WallItem>> BrowseWallhavenAsync(string catPath, int page, CancellationToken ct)
+    {
+        var (q, cats, sort, range) = WhMap((catPath ?? "").Trim('/'));
+        string url = "https://wallhaven.cc/api/v1/search?q=" + Uri.EscapeDataString(q) +
+                     "&categories=" + cats + "&purity=100&sorting=" + sort + "&order=desc&page=" + Math.Max(1, page) +
+                     "&atleast=1920x1080&ratios=landscape" + (range.Length > 0 ? "&topRange=" + range : "");
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        req.Headers.Accept.Clear();
+        req.Headers.Accept.ParseAdd("application/json");
+        using var resp = await Http.SendAsync(req, ct).ConfigureAwait(false);
         resp.EnsureSuccessStatusCode();
-        return await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+
+        using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false));
+        var list = new List<WallItem>();
+        foreach (var d in doc.RootElement.GetProperty("data").EnumerateArray())
+        {
+            string id = d.GetProperty("id").GetString() ?? "";
+            string full = d.GetProperty("path").GetString() ?? "";
+            string res = d.TryGetProperty("resolution", out var r) ? r.GetString() ?? "" : "";
+            string thumb = d.GetProperty("thumbs").TryGetProperty("large", out var t) ? t.GetString() ?? "" : "";
+            if (id.Length == 0 || full.Length == 0) continue;
+
+            list.Add(new WallItem
+            {
+                Source = WallSource.Wallhaven,
+                Title = res.Length > 0 ? "Wallpaper \u00B7 " + res.Replace("x", " \u00D7 ") : "Wallpaper",
+                PageUrl = "https://wallhaven.cc/w/" + id,
+                ThumbUrl = thumb.Length > 0 ? thumb : null,
+                FullUrl = full,
+                Resolution = res
+            });
+        }
+        return list;
+    }
+
+    // ---------- Last good list, kept on disk (used only when nothing can be loaded) ----------
+
+    private sealed class CacheItem
+    {
+        public int Source { get; set; }
+        public string Title { get; set; } = "";
+        public string PageUrl { get; set; } = "";
+        public string ThumbUrl { get; set; } = "";
+        public string FullUrl { get; set; } = "";
+        public string Resolution { get; set; } = "";
+    }
+
+    private static string CacheFile(string key) =>
+        Path.Combine(Root, "cache", Regex.Replace(key, @"[^A-Za-z0-9]+", "_") + ".json");
+
+    private static void SaveCache(string key, List<WallItem> items)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(Root, "cache"));
+            var dto = items.Select(i => new CacheItem
+            {
+                Source = (int)i.Source, Title = i.Title, PageUrl = i.PageUrl, ThumbUrl = i.ThumbUrl ?? "",
+                FullUrl = i.FullUrl, Resolution = i.Resolution
+            }).ToList();
+            File.WriteAllText(CacheFile(key), JsonSerializer.Serialize(dto));
+        }
+        catch { }
+    }
+
+    private static List<WallItem>? LoadCache(string key)
+    {
+        try
+        {
+            string f = CacheFile(key);
+            if (!File.Exists(f)) return null;
+            var dto = JsonSerializer.Deserialize<List<CacheItem>>(File.ReadAllText(f));
+            return dto?.Select(c => new WallItem
+            {
+                Source = (WallSource)c.Source, Title = c.Title, PageUrl = c.PageUrl,
+                ThumbUrl = c.ThumbUrl.Length > 0 ? c.ThumbUrl : null, FullUrl = c.FullUrl, Resolution = c.Resolution
+            }).ToList();
+        }
+        catch { return null; }
     }
 
     // ---------- Browsing ----------
 
-    public static async Task<List<WallItem>> BrowseAsync(WallSource src, string query, int page, CancellationToken ct)
+    public static async Task<List<WallItem>> BrowseAsync(WallSource src, string query, int page, CancellationToken ct, string? fourKPath = null)
     {
         string q = Uri.EscapeDataString((query ?? "").Trim());
         bool has = q.Length > 0;
@@ -89,7 +258,10 @@ public static class WallpaperService
             }
             else
             {
-                urls.Add(page > 1 ? $"https://4kwallpapers.com/?page={page}" : "https://4kwallpapers.com/");
+                // A category / list such as "anime" or "most-popular-4k-wallpapers" ("" = recent)
+                string path = (fourKPath ?? "").Trim('/');
+                string baseUrl = path.Length == 0 ? "https://4kwallpapers.com/" : $"https://4kwallpapers.com/{path}/";
+                urls.Add(page > 1 ? $"{baseUrl}?page={page}" : baseUrl);
             }
 
             Exception? last = null;
@@ -354,6 +526,15 @@ public static class WallpaperService
     /// </summary>
     public static async Task<DownloadInfo?> ResolveDownloadAsync(WallItem it, bool lite, int screenWidth, CancellationToken ct)
     {
+        if (it.Source == WallSource.Wallhaven)
+        {
+            if (string.IsNullOrEmpty(it.FullUrl)) return null;
+            string wext = Path.GetExtension(new Uri(it.FullUrl).AbsolutePath);
+            if (string.IsNullOrEmpty(wext)) wext = ".jpg";
+            string wres = it.Resolution.Length > 0 ? "-" + it.Resolution : "";
+            return new DownloadInfo(it.FullUrl, "https://wallhaven.cc/", "wh-" + SlugOf(it.PageUrl) + wres + wext.ToLowerInvariant());
+        }
+
         string html = await GetHtmlAsync(it.PageUrl, ct).ConfigureAwait(false);
         string slug = SlugOf(it.PageUrl);
 

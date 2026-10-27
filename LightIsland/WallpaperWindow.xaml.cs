@@ -28,6 +28,22 @@ public partial class WallpaperWindow : Window
     private Tab _tab = Tab.Static;
     private int _page = 1;
     private bool _ready;
+    private string _catPath = "";   // "" = Recent
+    private string _catName = "Recent";
+
+    // Same categories as the 4kwallpapers.com menu: (name, url path)
+    private static readonly (string Name, string Path)[] Categories =
+    {
+        ("Recent", ""), ("Popular", "most-popular-4k-wallpapers"), ("Featured", "best-4k-wallpapers"),
+        ("Abstract", "abstract"), ("Animals", "animals"), ("Anime", "anime"), ("Architecture", "architecture"),
+        ("Bikes", "bikes"), ("Black/Dark", "black-dark"), ("Cars", "cars"), ("Celebrations", "celebrations"),
+        ("Cute", "cute"), ("Fantasy", "fantasy"), ("Flowers", "flowers"), ("Food", "food"), ("Games", "games"),
+        ("Gradients", "gradients"), ("CGI", "graphics-cgi"), ("Lifestyle", "lifestyle"), ("Love", "love"),
+        ("Military", "military"), ("Minimal", "minimal"), ("Movies", "movies"), ("Music", "music"),
+        ("Nature", "nature"), ("People", "people"), ("Photography", "photography"), ("Quotes", "quotes"),
+        ("Sci-Fi", "sci-fi"), ("Space", "space"), ("Sports", "sports"), ("Technology", "technology"),
+        ("World", "world"),
+    };
     private int _loadId;
     private double _cardW = 230;
     private CancellationTokenSource? _cts;
@@ -44,6 +60,8 @@ public partial class WallpaperWindow : Window
             Cards.Children.Clear();
         };
 
+        BuildChips();
+
         _ready = true;
         UpdateChrome();
         Reload();
@@ -58,6 +76,41 @@ public partial class WallpaperWindow : Window
     private static Brush B(string hex) => new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));
 
     // ---------- Header events ----------
+
+    private void BuildChips()
+    {
+        bool first = true;
+        foreach (var (name, path) in Categories)
+        {
+            var chip = new RadioButton
+            {
+                Style = (Style)FindResource("Chip"),
+                Content = name,
+                Tag = path,
+                GroupName = "cats",
+                IsChecked = first
+            };
+            chip.Checked += Chip_Checked;
+            Chips.Children.Add(chip);
+            first = false;
+        }
+    }
+
+    private void Chip_Checked(object sender, RoutedEventArgs e)
+    {
+        if (!_ready || sender is not RadioButton rb) return;
+        _catPath = rb.Tag as string ?? "";
+        _catName = rb.Content as string ?? "";
+        _page = 1;
+        Reload();
+    }
+
+    // Mouse wheel over the chips scrolls them sideways
+    private void Chips_Wheel(object sender, MouseWheelEventArgs e)
+    {
+        ChipsHost.ScrollToHorizontalOffset(ChipsHost.HorizontalOffset - e.Delta);
+        e.Handled = true;
+    }
 
     private void Tab_Checked(object sender, RoutedEventArgs e)
     {
@@ -131,6 +184,7 @@ public partial class WallpaperWindow : Window
     {
         bool lib = _tab == Tab.Library;
         Pager.Visibility = lib ? Visibility.Collapsed : Visibility.Visible;
+        ChipsHost.Visibility = lib ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void ShowStatus(string text)
@@ -171,7 +225,7 @@ public partial class WallpaperWindow : Window
         int id = ++_loadId;
 
         Cards.Children.Clear();
-        PageLabel.Text = "Page " + _page;
+        PageLabel.Text = _tab == Tab.Library ? "Page " + _page : _catName + " \u00B7 Page " + _page;
         PrevBtn.IsEnabled = _page > 1;
         NextBtn.IsEnabled = false;
         RecalcCardSize();
@@ -185,7 +239,7 @@ public partial class WallpaperWindow : Window
         ShowStatus("Loading...");
         try
         {
-            var items = await WallpaperService.BrowseAsync(WallSource.FourK, "", _page, ct);
+            var items = await WallpaperService.BrowseSmartAsync(_page, _catPath, ct);
             if (id != _loadId) return;
 
             if (items.Count == 0)
@@ -206,7 +260,7 @@ public partial class WallpaperWindow : Window
         catch (Exception ex)
         {
             if (id == _loadId)
-                ShowStatus("Could not load. Check your internet connection.\n" + ex.Message);
+                ShowStatus(FriendlyError(ex));
         }
     }
 
@@ -229,7 +283,7 @@ public partial class WallpaperWindow : Window
             Background = B("#1FFFFFFF"),
             CornerRadius = new CornerRadius(17, 17, 0, 0)
         };
-        thumb.Child = Badge("4K");
+        thumb.Child = Badge(it.Source == WallSource.Wallhaven && !IsUhd(it.Resolution) ? "HD" : "4K");
         card.Tag = thumb;
         sp.Children.Add(thumb);
 
@@ -240,7 +294,7 @@ public partial class WallpaperWindow : Window
             Margin = new Thickness(14, 2, 14, 0),
             FontSize = 11.5,
             Foreground = (Brush)FindResource("TextSecondary"),
-            Text = "4K Wallpapers",
+            Text = it.Source == WallSource.Wallhaven ? "Wallpapers" : "4K Wallpapers",
             TextTrimming = TextTrimming.CharacterEllipsis
         };
         sp.Children.Add(info);
@@ -320,7 +374,7 @@ public partial class WallpaperWindow : Window
         btn.IsEnabled = false;
         bar.Visibility = Visibility.Visible;
         bar.Value = 0;
-        info.Text = "Finding the 4K file...";
+        info.Text = "Finding the best file...";
         try
         {
             // Always the sharpest file the site has (4K or bigger), never a smaller copy
@@ -353,7 +407,7 @@ public partial class WallpaperWindow : Window
         }
         catch (Exception ex)
         {
-            info.Text = "Failed: " + Short(ex.Message);
+            info.Text = "Could not download. Please try again.";
         }
         finally
         {
@@ -361,6 +415,22 @@ public partial class WallpaperWindow : Window
             bar.Visibility = Visibility.Collapsed;
             if (info.Text.Length == 0) info.Text = sourceName;
         }
+    }
+
+    // Plain words instead of raw .NET error text
+    private static string FriendlyError(Exception ex)
+    {
+        var inner = ex;
+        while (inner.InnerException != null) inner = inner.InnerException;
+        if (inner is System.Net.Sockets.SocketException || inner is System.Net.Http.HttpRequestException hx && hx.StatusCode == null)
+            return "No internet connection.\nConnect to the internet and press Next/Previous or switch category to try again.";
+        return "Wallpapers are not available right now.\nPlease try again in a minute.";
+    }
+
+    private static bool IsUhd(string res)
+    {
+        int x = res.IndexOf('x');
+        return x > 0 && int.TryParse(res.Substring(0, x), out int w) && w >= 3800;
     }
 
     private static string Short(string s) => s.Length > 60 ? s.Substring(0, 60) + "..." : s;

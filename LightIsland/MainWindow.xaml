@@ -416,15 +416,61 @@
                                        Text="Click + or drop an app here" />
                         </Grid>
 
-                        <!-- Page 5: Clock (time and date) -->
+                        <!-- Page 3: Clock + Weather (time and date on the left, weather on the right) -->
                         <Grid x:Name="PageClock" Visibility="Collapsed">
                             <Grid.RenderTransform><TranslateTransform /></Grid.RenderTransform>
-                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                <TextBlock x:Name="ClockBig" FontSize="44" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="1.25*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="4,0,10,0">
+                                <TextBlock x:Name="ClockBig" FontSize="40" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"
                                            HorizontalAlignment="Center" />
-                                <TextBlock x:Name="ClockDate" FontSize="13" Foreground="{DynamicResource TextDimBrush}"
+                                <TextBlock x:Name="ClockDate" FontSize="12.5" Foreground="{DynamicResource TextDimBrush}"
                                            HorizontalAlignment="Center" Margin="0,2,0,0" />
                             </StackPanel>
+                            <Border x:Name="WxDivider" Grid.Column="1" Width="1" Background="{DynamicResource TextDimBrush}" Opacity="0.35"
+                                    Margin="0,8" />
+                            <Viewbox x:Name="WxContent" Grid.Column="2" Stretch="Uniform" StretchDirection="DownOnly"
+                                     VerticalAlignment="Center" HorizontalAlignment="Center" Margin="12,0,0,0">
+                                <StackPanel Width="200">
+                                    <TextBlock x:Name="WxCity" Foreground="{DynamicResource TextDimBrush}" FontSize="12"
+                                               FontWeight="SemiBold" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center" />
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,0">
+                                        <Viewbox Width="34" Height="34" VerticalAlignment="Center">
+                                            <Path x:Name="WxIconBig" Width="24" Height="24" Stretch="None"
+                                                  Fill="{DynamicResource AccentBrush}" />
+                                        </Viewbox>
+                                        <TextBlock x:Name="WxBigTemp" Foreground="{DynamicResource TextBrush}" FontSize="34"
+                                                   FontWeight="Bold" VerticalAlignment="Center" Margin="8,0,0,0" />
+                                    </StackPanel>
+                                    <TextBlock x:Name="WxCond" Foreground="{DynamicResource TextBrush}" FontSize="13"
+                                               FontWeight="SemiBold" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                                    <UniformGrid Columns="3">
+                                        <Border Background="{DynamicResource TileBg}" BorderBrush="{DynamicResource TileStroke}" BorderThickness="1" CornerRadius="9" Padding="6,4" Margin="0,0,3,0">
+                                            <StackPanel>
+                                                <TextBlock Text="Wind" Foreground="{DynamicResource TextDimBrush}" FontSize="10" />
+                                                <TextBlock x:Name="WxWind" Foreground="{DynamicResource TextBrush}" FontSize="11.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Background="{DynamicResource TileBg}" BorderBrush="{DynamicResource TileStroke}" BorderThickness="1" CornerRadius="9" Padding="6,4" Margin="1.5,0">
+                                            <StackPanel>
+                                                <TextBlock Text="Feels like" Foreground="{DynamicResource TextDimBrush}" FontSize="10" />
+                                                <TextBlock x:Name="WxFeels" Foreground="{DynamicResource TextBrush}" FontSize="11.5" FontWeight="SemiBold" />
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Background="{DynamicResource TileBg}" BorderBrush="{DynamicResource TileStroke}" BorderThickness="1" CornerRadius="9" Padding="6,4" Margin="3,0,0,0">
+                                            <StackPanel>
+                                                <TextBlock Text="Humidity" Foreground="{DynamicResource TextDimBrush}" FontSize="10" />
+                                                <TextBlock x:Name="WxHum" Foreground="{DynamicResource TextBrush}" FontSize="11.5" FontWeight="SemiBold" />
+                                            </StackPanel>
+                                        </Border>
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Viewbox>
+                            <TextBlock x:Name="WxHint" Grid.Column="2" Style="{StaticResource Hint}" Visibility="Collapsed"
+                                       Text="Weather is not available right now.&#10;Check internet or the city in Settings." />
                         </Grid>
 
                         <!-- Page 6: Calendar -->
@@ -455,64 +501,6 @@
                                 </Grid>
                             </Border>
                             <Border x:Name="CalHost" Grid.Column="1" VerticalAlignment="Stretch" />
-                        </Grid>
-
-                        <!-- Page 7: Weather -->
-                        <Grid x:Name="PageWx" Visibility="Collapsed">
-                            <Grid.RenderTransform><TranslateTransform /></Grid.RenderTransform>
-                            <Grid x:Name="WxContent">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="1.15*" />
-                                </Grid.ColumnDefinitions>
-                                <Grid Margin="4,2,10,2">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="*" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-                                    <TextBlock x:Name="WxCity" Foreground="{DynamicResource TextDimBrush}" FontSize="12.5"
-                                               FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                    <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center"
-                                                HorizontalAlignment="Center">
-                                        <Viewbox Width="40" Height="40" VerticalAlignment="Center">
-                                            <Path x:Name="WxIconBig" Width="24" Height="24" Stretch="None"
-                                                  Fill="{DynamicResource AccentBrush}" />
-                                        </Viewbox>
-                                        <TextBlock x:Name="WxBigTemp" Foreground="{DynamicResource TextBrush}" FontSize="42"
-                                                   FontWeight="Bold" VerticalAlignment="Center" Margin="8,0,0,0" />
-                                    </StackPanel>
-                                    <TextBlock x:Name="WxCond" Grid.Row="2" Foreground="{DynamicResource TextBrush}" FontSize="14"
-                                               FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                </Grid>
-                                <Border Grid.Column="1" Width="1" Background="{DynamicResource TextDimBrush}" Opacity="0.35"
-                                        Margin="0,6" />
-                                <Viewbox Grid.Column="2" Stretch="Uniform" StretchDirection="DownOnly" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="12,0,0,0">
-                                <StackPanel Width="168">
-                                    <Border Background="{DynamicResource TileBg}" BorderBrush="{DynamicResource TileStroke}" BorderThickness="1" CornerRadius="10" Padding="11,5" Margin="0,0,0,5">
-                                        <StackPanel>
-                                            <TextBlock Text="Wind" Foreground="{DynamicResource TextDimBrush}" FontSize="11" />
-                                            <TextBlock x:Name="WxWind" Foreground="{DynamicResource TextBrush}" FontSize="14" FontWeight="SemiBold" />
-                                        </StackPanel>
-                                    </Border>
-                                    <Border Background="{DynamicResource TileBg}" BorderBrush="{DynamicResource TileStroke}" BorderThickness="1" CornerRadius="10" Padding="11,5" Margin="0,0,0,5">
-                                        <StackPanel>
-                                            <TextBlock Text="Feels like" Foreground="{DynamicResource TextDimBrush}" FontSize="11" />
-                                            <TextBlock x:Name="WxFeels" Foreground="{DynamicResource TextBrush}" FontSize="14" FontWeight="SemiBold" />
-                                        </StackPanel>
-                                    </Border>
-                                    <Border Background="{DynamicResource TileBg}" BorderBrush="{DynamicResource TileStroke}" BorderThickness="1" CornerRadius="10" Padding="11,5">
-                                        <StackPanel>
-                                            <TextBlock Text="Humidity" Foreground="{DynamicResource TextDimBrush}" FontSize="11" />
-                                            <TextBlock x:Name="WxHum" Foreground="{DynamicResource TextBrush}" FontSize="14" FontWeight="SemiBold" />
-                                        </StackPanel>
-                                    </Border>
-                                </StackPanel>
-                            </Viewbox>
-                            </Grid>
-                            <TextBlock x:Name="WxHint" Style="{StaticResource Hint}" Visibility="Collapsed"
-                                       Text="Weather is not available right now.&#10;Check your internet connection or the city in Settings." />
                         </Grid>
 
                         <!-- Page 8: System (real numbers, only measured while this page is open) -->
@@ -624,18 +612,17 @@
                                             <RowDefinition Height="14" />
                                             <RowDefinition Height="18" />
                                         </Grid.RowDefinitions>
-                                        <TextBlock Text="NETWORK" Foreground="{DynamicResource TextDimBrush}" FontSize="10"
+                                        <TextBlock Text="CLEAN" Foreground="{DynamicResource TextDimBrush}" FontSize="10"
                                                    FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        <TextBlock x:Name="SysNetV" Grid.Row="1" Text="…" Foreground="{DynamicResource TextBrush}" FontSize="15"
+                                        <TextBlock x:Name="CleanV" Grid.Row="1" Text="&#x2014;" Foreground="{DynamicResource TextBrush}" FontSize="17"
                                                    FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        <TextBlock x:Name="SysNetS" Grid.Row="2" Text=" " Foreground="{DynamicResource TextDimBrush}" FontSize="10"
+                                        <TextBlock x:Name="CleanS" Grid.Row="2" Text="Temp, cache, bin" Foreground="{DynamicResource TextDimBrush}" FontSize="10"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        <Grid Grid.Row="3" Height="3" Margin="12,0" VerticalAlignment="Center" Visibility="Hidden">
-                                        <Border CornerRadius="1.5" Background="{DynamicResource TrackBrush}" />
-                                        <Border CornerRadius="1.5" Background="{DynamicResource AccentBrush}" RenderTransformOrigin="0,0.5">
-                                            <Border.RenderTransform><ScaleTransform x:Name="SysNetSc" ScaleX="0" /></Border.RenderTransform>
+                                        <Border x:Name="CleanBtn" Grid.Row="3" Background="{DynamicResource AccentBrush}" CornerRadius="8" Height="16" Width="56"
+                                                HorizontalAlignment="Center" VerticalAlignment="Center" Cursor="Hand" MouseLeftButtonUp="Clean_Click">
+                                            <TextBlock x:Name="CleanBtnText" Text="Clean" Foreground="#101012" FontSize="10"
+                                                       FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
-                                    </Grid>
                                     </Grid>
                                 </Viewbox>
                             </Border>
@@ -663,6 +650,18 @@
                                 </Viewbox>
                             </Border>
                             </UniformGrid>
+                        </Grid>
+
+                        <!-- Page 9: Downloads (link card + running / finished jobs). Built in code. -->
+                        <Grid x:Name="PageDl" Visibility="Collapsed">
+                            <Grid.RenderTransform><TranslateTransform /></Grid.RenderTransform>
+                            <Grid x:Name="DlHost" />
+                        </Grid>
+
+                        <!-- Page 10: Clipboard history. Built in code. -->
+                        <Grid x:Name="PageClip" Visibility="Collapsed">
+                            <Grid.RenderTransform><TranslateTransform /></Grid.RenderTransform>
+                            <Grid x:Name="ClipHost" />
                         </Grid>
                     </Grid>
 

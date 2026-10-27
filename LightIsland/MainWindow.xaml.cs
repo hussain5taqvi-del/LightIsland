@@ -69,6 +69,7 @@ public partial class MainWindow : Window
         InitClock();
         InitHud();
         InitExtras();
+        InitTasks();
         ApplyCompactLayout();
         Island.SizeChanged += (_, _) => ApplyCorners();
         SeekHost.SizeChanged += (_, _) => { if (_expanded && !_seeking) RefreshProgress(); };
@@ -413,6 +414,7 @@ public partial class MainWindow : Window
     private void Island_Click(object sender, MouseButtonEventArgs e)
     {
         if (_expanded) return;
+        if (TryRevealToast()) { e.Handled = true; return; } // "Done - click to show"
         _leaveTimer.Stop();
         Animate(true);
         e.Handled = true;
@@ -454,7 +456,6 @@ public partial class MainWindow : Window
         bool wasExpanded = _expanded;
         _expanded = expand;
         if (!expand && _editApps) { _editApps = false; EndDrag(); if (_view == ViewApps) RefreshApps(); }
-        if (expand && !wasExpanded) PrimeStats();
         UpdateBarTimer();
         UpdateStatsTimer();
         UpdateProgressTimer();
@@ -467,8 +468,6 @@ public partial class MainWindow : Window
         if (expand)
         {
             _trimTimer.Stop();
-            RefreshProgress();
-            if (_view != ViewMedia && _view != ViewApps) OnViewShown(_view);
         }
 
         // ----- Size animation, depends on the chosen style -----
@@ -613,16 +612,33 @@ public partial class MainWindow : Window
             ExpandedScale.BeginAnimation(ScaleTransform.ScaleYProperty, zy);
 
             if (!wasExpanded) PlayGlass(); // Liquid Glass: shine + rim flash (does nothing when Glass is off)
+
+            // Everything that only fills the content runs AFTER the first frames of the animation,
+            // so tapping the island never waits for it
+            int openToken = token;
+            Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+            {
+                if (openToken != _animToken || !_expanded) return;
+                if (!wasExpanded) PrimeStats();
+                RefreshProgress();
+                if (_view != ViewMedia && _view != ViewApps) OnViewShown(_view);
+            }));
         }
         else
         {
             Expanded.IsHitTestVisible = false;
+            SetExpandedCache(true); // the shrinking content is one bitmap: no layout of every label on every frame
 
             var fade = Da(0, 140, CubicOut());
             fade.Completed += (_, _) =>
             {
                 // Hidden content costs nothing (no layout, no drawing) while the island is collapsed
-                if (token == _animToken && !_expanded) Expanded.Visibility = Visibility.Collapsed;
+                if (token == _animToken && !_expanded)
+                {
+                    SetExpandedCache(false);
+                    Expanded.Visibility = Visibility.Collapsed;
+                    ResetToMediaPage(); // next time it opens on the music page
+                }
             };
             Expanded.BeginAnimation(OpacityProperty, fade);
             ExpandedShift.BeginAnimation(TranslateTransform.YProperty, Da(8, 220, CubicOut()));
@@ -939,6 +955,7 @@ public partial class MainWindow : Window
         _meter.Dispose();
         DisposeHud();
         DisposeExtras();
+        DisposeTasks();
         WallpaperManager.StopLive(false); // keep the choice, so it comes back at the next start
         _tray?.Dispose(); // remove the tray icon
         _tray = null;

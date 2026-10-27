@@ -6,6 +6,13 @@ using System.Text.RegularExpressions;
 
 namespace LightIsland;
 
+/// <summary>A downloaded file that is deleted by itself at the chosen time (only files LightIsland downloaded).</summary>
+public sealed class AutoDeleteItem
+{
+    public string Path { get; set; } = "";
+    public long DueUtcTicks { get; set; }
+}
+
 /// <summary>
 /// User settings and saved lists. Stored in %AppData%\LightIsland\settings.json.
 /// </summary>
@@ -54,6 +61,19 @@ public sealed class AppSettings
 
     // Settings file version (used to upgrade old saved sizes)
     public int Version { get; set; } = 0;
+
+    // Files, links and clipboard
+    public bool FileWheel { get; set; } = true;        // hold the ring key on a selected file: ring of actions
+    public bool LinkDetect { get; set; } = true;       // a copied video link opens the download card
+    public bool LinkAnySite { get; set; } = true;      // also react to links of sites that are not in the known list
+    public bool ClipHistory { get; set; } = true;      // clipboard page (kept in RAM only, never saved)
+    public string DownloadDir { get; set; } = "";      // empty = Downloads\LightIsland
+    public int DefaultQuality { get; set; } = 1080;
+    public int DlLimitMBps { get; set; } = 4;           // 0 = unlimited; keeps the rest of the PC online
+    public int RamLimitMb { get; set; } = 30;          // hard limit for the island process
+    public List<AutoDeleteItem> AutoDelete { get; set; } = new();
+    public int RingKey { get; set; } = 0x58;           // hold this key on a selected file: the ring is open until it is let go (virtual-key code, default X)
+    public Dictionary<string, List<string>> RingPins { get; set; } = new();   // formats pinned to the front of the ring, per file type
 
     // Saved lists (paths only, nothing is copied)
     public List<string> FavoriteApps { get; set; } = new();
@@ -156,6 +176,18 @@ public sealed class AppSettings
 
         FavoriteApps ??= new List<string>();
         TrayFiles ??= new List<string>();
+        AutoDelete ??= new List<AutoDeleteItem>();
+        RingPins ??= new Dictionary<string, List<string>>();
+        RamLimitMb = Math.Clamp(RamLimitMb, 20, 400);
+        if (RingKey < 8 || RingKey > 254 || RingKey == 0x1B || RingKey == 0x0D || RingKey == 0x09) RingKey = 0x58;
+        // These have no switch any more: always on / unlimited
+        FileWheel = true;
+        LinkDetect = true;
+        LinkAnySite = true;
+        ClipHistory = true;
+        DlLimitMBps = 0;
+        DefaultQuality = Math.Clamp(DefaultQuality, 720, 4320);
+        DownloadDir ??= "";
     }
 
     /// <summary>Copies size, corner and appearance values (used by "Reset").</summary>

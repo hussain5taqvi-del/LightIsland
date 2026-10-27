@@ -158,3 +158,92 @@ Settings and lists are saved in `%AppData%\LightIsland\settings.json`.
 - System page: temperature replaced by an internet speed test (Cloudflare servers, only runs when you press the button). Numbers are already there the moment the page appears.
 - Camera / microphone dots are vertical at the far right.
 - Rounder, smoother notch: bigger corner radius defaults and softer "ears". Clearer, more see-through Liquid Glass with a visible glass rim all around.
+
+
+## New in 1.3.0
+
+**File ring.** Select a file (or several) in Explorer or on the Desktop and tap **Right Ctrl**. A ring of actions appears under the cursor; click one, or press 1-9. Esc closes it.
+- Photo: To JPG, To PNG, Compress, Remove background, Copy text (OCR), To PDF
+- Video: Compress, To MP4, To GIF, Audio only, Mute
+- PDF: Compress, To images, Copy text (OCR), Merge (when several are selected)
+- Audio: To M4A, To WAV, To MP3
+- Word / RTF / text: To PDF
+- Every file: Zip, Copy path
+
+Photo, PDF, OCR and document work is fully offline and needs no extra download. Video/audio conversion needs ffmpeg and background removal needs a small model (about 5 MB); both are downloaded once on first use into `%AppData%\LightIsland\tools`.
+
+**Link downloads.** Copy a video link (YouTube, Instagram, X/Twitter, Facebook, TikTok and more) and the island shows a card with thumbnail, duration and a quality pill (720p up to the best the video offers). Video/Audio only, MP4, subtitles, folder and auto-delete are in the options panel. Downloads page shows progress with pause / resume / stop. yt-dlp is downloaded on first use and updated weekly.
+
+**Clipboard history.** A new page with the last 25 copies, source app, time and colour swatches. Kept in RAM only, never written to disk. Password-manager copies are ignored.
+
+**30 MB RAM cap.** LightIsland sets a hard working-set maximum on itself (default 30 MB, `RamLimitMb` in `%AppData%\LightIsland\settings.json`). All heavy work runs in short-lived helper processes, which are not counted in that cap.
+
+## Privacy notes
+- The keyboard hook only reacts to a lone Right Ctrl tap and never records keys.
+- On the Desktop, selection is read by sending Ctrl+C, which briefly touches the clipboard (the app ignores that copy).
+
+## Known limits
+- PDF compress and merge re-render pages as images, so text stops being selectable.
+- GIF is capped at 30 seconds.
+- Only the island process itself is capped at 30 MB.
+- This version was written without a compiler available; run `build.bat` and report any errors.
+
+## 1.3.3
+- Right Ctrl listener runs on its own thread (the ring opens every time). The ring has a "More formats" page (photo: BMP/TIFF/GIF/WebP/resize/rotate/mirror; video: MKV/MOV/AVI/WebM/720p/frame; audio: FLAC/OGG/OPUS/AAC/AIFF/WMA).
+- Downloads show progress only on the Downloads page (and a message when done).
+- Faster helper start (single-file compression removed, ReadyToRun on) and two conversions in parallel.
+- Memory limit can be changed in Settings (30 / 45 / 60 / 100 MB).
+
+## 1.3.4
+- Clock and Weather are now ONE page (time and date on the left, weather on the right). The page count is 7.
+- Downloads use a hidden cache folder (`%AppData%\LightIsland\cache`) for parts and fragments; it is deleted when the download ends, fails or is stopped (and at every start). Only the finished file lands in your download folder.
+- YouTube: a small helper (deno) is fetched once so every quality works. If YouTube asks for a sign-in, the app retries with the cookies of Firefox / Edge / Chrome / Brave.
+- Removed the 10 MB chunk option that made some sites (Facebook, Instagram) return empty files.
+- Links of ANY site are checked quietly with yt-dlp; the island opens only when a video is really found.
+
+## 1.3.5
+- File ring shortcut is now **Right Ctrl + X** (select a file in Explorer or on the Desktop first). The X key is swallowed there, so Explorer never "cuts" the file. Ring is smaller.
+- The "Files, links and clipboard" section is gone from Settings. File ring, link detection (all sites), and clipboard history are always on; download speed is not limited (2 connections per download, one download at a time, so other apps keep their share of the internet).
+- Helper processes start without the WPF app (faster). Single-file compression is back on (smaller exe).
+
+## 1.3.6
+- App icons for shortcuts (This PC, Recycle Bin...) no longer show the small arrow.
+- Removed the "clip a part" (scissors) option from the download card.
+- YouTube link card opens at once (title, channel, picture); length and best quality are filled in a moment later.
+- After "Download" the island closes and the download runs in the background (progress on the Downloads page).
+- Opening the island is smoother: the page content is prepared after the first frames of the animation.
+
+## 1.4.0 – everything built in, new ring
+
+**Nothing to download any more.** `build.bat` now assembles a release **folder**:
+
+```
+release\LightIsland.exe          the app
+release\engines\                 yt-dlp, deno, background-removal model
+release\filee\                   Filee converter (filee-cli.exe + ffmpeg, pandoc, ghostscript, 7-Zip, rhwp)
+```
+
+Copy the whole folder anywhere and run `LightIsland.exe`. (The internet is only needed on the PC that builds it.)
+`build.bat full` additionally bundles LibreOffice, calibre, Java and OCR for the rarest document / e-book formats (much bigger).
+yt-dlp keeps itself current: a private copy in `%AppData%\LightIsland\tools` is updated once a week; the bundled one is the starting point.
+
+**Link copy:** the card with the Download button appears at once; title, picture and qualities fill in a moment later.
+
+**New ring (hold your key on a selected file):**
+- **Hold the ring key** (default X; change it in Settings → General → "File ring key") on a selected file in Explorer or on the Desktop: the ring opens. **Let go: it closes.** You can click a slice while holding. When work has started in the ring it stays until it is done.
+- Letter keys are swallowed in Explorer / Desktop only (so Explorer does not jump to files); Ctrl / Shift / Alt / Win keys are never swallowed. Pressing the key together with another key (Ctrl+X etc.) does nothing special.
+- 8 slices per page, they fly in one after the other; the slice under the cursor pops out in your accent colour.
+- Tab, mouse wheel, arrow keys or a click in the middle turn to the next page with the other formats (all that Filee can make from that file).
+- Click a slice: the middle becomes a progress ring, then a green check. Esc closes the ring, the work continues.
+- Right-click a format to **pin** it to the front page (small dot); right-click again to unpin.
+- Keys 1–8 pick a slice. Archives get an Extract slice.
+- The formats of each file type are looked up once (in the background) and remembered; the very first ring of a never-seen type opens in the quick form.
+
+## Third-party
+Filee (MIT, https://github.com/KnifeLemon/Filee) – the converter in `filee\`; its licence and notices are copied next to it.
+FFmpeg, Pandoc, Ghostscript, 7-Zip, rhwp and yt-dlp are separate programs under their own licences (FFmpeg build: GPL-3.0).
+
+## 1.4.2
+- Downloads never depend on the Downloads page: close the island, the downloads keep going in the background (a message appears when each is done).
+- Fewer failed downloads: up to three tries per video. Try 2 refreshes yt-dlp first and asks for whatever format the site really offers; try 3 uses IPv4 and other clients. Private videos, sign-in walls and offline PCs are not retried. More network retries / timeouts inside yt-dlp.
+- Smoother animations: the island is drawn as one picture while it closes (as it already was while opening); page changes build the new page first, then slide both pages as pictures; the ring's shadow is drawn once instead of on every frame.

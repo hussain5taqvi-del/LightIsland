@@ -31,8 +31,8 @@ public partial class MainWindow
         };
 
         // These events arrive on background threads: hand them to the UI thread
-        _volume.Changed += (vol, muted) => Dispatcher.InvokeAsync(() => OnVolume(vol, muted));
-        _brightness.Changed += value => Dispatcher.InvokeAsync(() => OnBrightness(value));
+        _volume.Changed += (vol, muted) => Dispatcher.InvokeAsync(() => OnVolume(vol, muted), DispatcherPriority.Send);
+        _brightness.Changed += value => Dispatcher.InvokeAsync(() => OnBrightness(value), DispatcherPriority.Send);
         _btWatcher.Connected += (name, battery) => Dispatcher.InvokeAsync(() => OnBluetooth(name, battery));
 
         ApplyHudSettings();
@@ -89,9 +89,20 @@ public partial class MainWindow
         if (!hasBar && rightText != null) HudValue.Text = rightText;
 
         // The bar fill glides to the new value instead of jumping
+        // (no long glide: it must stay in step with Windows' own slider)
         if (hasBar)
-            HudFill.BeginAnimation(WidthProperty,
-                new DoubleAnimation(HudBarWidth * Math.Clamp(bar!.Value, 0, 1), Dur(200)) { EasingFunction = CubicOut() });
+        {
+            double target = HudBarWidth * Math.Clamp(bar!.Value, 0, 1);
+            if (!_hudActive)
+            {
+                HudFill.BeginAnimation(WidthProperty, null);
+                HudFill.Width = target;
+            }
+            else
+            {
+                HudFill.BeginAnimation(WidthProperty, new DoubleAnimation(target, Dur(60)) { FillBehavior = FillBehavior.HoldEnd });
+            }
+        }
 
         if (!_hudActive)
         {

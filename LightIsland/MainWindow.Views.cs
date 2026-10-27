@@ -13,12 +13,12 @@ using System.Windows.Threading;
 
 namespace LightIsland;
 
-// Pages inside the expanded island: Media, Favorite apps, Clock, Calendar, Weather, System.
+// Pages inside the expanded island: Media, Favorite apps, Clock + Weather, Calendar, System, Downloads, Clipboard.
 // Swap pages with the mouse wheel or the dots.
 public partial class MainWindow
 {
-    private const int ViewCount = 6;
-    private const int ViewMedia = 0, ViewApps = 1, ViewClock = 2, ViewCal = 3, ViewWx = 4, ViewSys = 5;
+    private const int ViewCount = 7;
+    private const int ViewMedia = 0, ViewApps = 1, ViewClock = 2, ViewCal = 3, ViewSys = 4, ViewDl = 5, ViewClip = 6;
 
     private static readonly FontFamily GlyphFont = new("Segoe MDL2 Assets");
     private static Brush TileBrush = MakeFrozen(new SolidColorBrush(Color.FromRgb(0x26, 0x26, 0x28)));
@@ -38,7 +38,7 @@ public partial class MainWindow
 
     private void InitViews()
     {
-        _pages = new[] { PageMedia, PageApps, PageClock, PageCal, PageWx, PageSys };
+        _pages = new[] { PageMedia, PageApps, PageClock, PageCal, PageSys, PageDl, PageClip };
 
         for (int i = 0; i < ViewCount; i++)
         {
@@ -75,12 +75,22 @@ public partial class MainWindow
 
         const double shift = 22;
 
+        // The new page is built BEFORE the movement starts (animations run on the clock: a build in the middle
+        // would make the first frames jump), and both pages are moved as pictures (cheap) until they settle.
+        newPage.Opacity = 0;
+        newPage.Visibility = Visibility.Visible;
+        OnViewShown(index);
+        PageCache(oldPage, true);
+        PageCache(newPage, true);
+        newPage.UpdateLayout();
+
         // Old page fades out and slides away
         var oldMove = (TranslateTransform)oldPage.RenderTransform;
         var fadeOut = new DoubleAnimation(0, Dur(130));
         fadeOut.Completed += (_, _) =>
         {
             if (!ReferenceEquals(_pages[_view], oldPage)) oldPage.Visibility = Visibility.Collapsed;
+            PageCache(oldPage, false);
         };
         oldPage.BeginAnimation(OpacityProperty, fadeOut);
         oldMove.BeginAnimation(TranslateTransform.XProperty,
@@ -91,15 +101,66 @@ public partial class MainWindow
 
         // New page fades in and slides into place
         var newMove = (TranslateTransform)newPage.RenderTransform;
-        newPage.Visibility = Visibility.Visible;
         newPage.BeginAnimation(OpacityProperty,
             new DoubleAnimation(0, 1, Dur(220)));
-        newMove.BeginAnimation(TranslateTransform.XProperty,
-            new DoubleAnimation(direction * shift, 0, Dur(360))
-            {
-                EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut }
-            });
+        var slideIn = new DoubleAnimation(direction * shift, 0, Dur(360))
+        {
+            EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut }
+        };
+        slideIn.Completed += (_, _) => PageCache(newPage, false); // settled: live content again (buttons, bars)
+        newMove.BeginAnimation(TranslateTransform.XProperty, slideIn);
+    }
 
+    private void PageCache(Grid page, bool on)
+    {
+        try { page.CacheMode = on ? new BitmapCache(_dpi) { SnapsToDevicePixels = true } : null; }
+        catch { }
+    }
+
+    // Called when the island is closed (and hidden): go back to the music page without any
+    // animation, and stop the timers of the page that was open (System page timer etc.)
+    private void ResetToMediaPage()
+    {
+        if (_view == ViewMedia) return;
+
+        for (int i = 0; i < _pages.Length; i++)
+        {
+            Grid pg = _pages[i];
+            pg.BeginAnimation(OpacityProperty, null);
+            PageCache(pg, false);
+            if (pg.RenderTransform is TranslateTransform tt)
+            {
+                tt.BeginAnimation(TranslateTransform.XProperty, null);
+                tt.X = 0;
+            }
+            pg.Opacity = 1;
+            pg.Visibility = i == ViewMedia ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        _view = ViewMedia;
+        UpdateDots();
+        UpdateStatsTimer();
+        UpdateProgressTimer();
+    }
+
+    // Switches to a page without any animation (used while the island is closed)
+    private void ShowViewInstant(int index)
+    {
+        for (int i = 0; i < _pages.Length; i++)
+        {
+            Grid pg = _pages[i];
+            pg.BeginAnimation(OpacityProperty, null);
+            PageCache(pg, false);
+            if (pg.RenderTransform is TranslateTransform tt)
+            {
+                tt.BeginAnimation(TranslateTransform.XProperty, null);
+                tt.X = 0;
+            }
+            pg.Opacity = 1;
+            pg.Visibility = i == index ? Visibility.Visible : Visibility.Collapsed;
+        }
+        _view = index;
+        UpdateDots();
         OnViewShown(index);
     }
 
@@ -111,6 +172,8 @@ public partial class MainWindow
             case ViewCal: BuildCalendar(); break;
             case ViewApps: _editApps = false; RefreshApps(); break;
             case ViewClock: UpdateClock(); break;
+            case ViewDl: RenderDl(); break;
+            case ViewClip: RenderClip(); break;
         }
     }
 

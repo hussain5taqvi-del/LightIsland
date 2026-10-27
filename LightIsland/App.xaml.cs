@@ -14,6 +14,18 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // Helper mode: "LightIsland.exe --worker ..." does one heavy job (picture, PDF, OCR...) and exits.
+        // No window, no single-instance check, no RAM limit (it lives for a few seconds).
+        if (e.Args.Length > 0 && e.Args[0] == "--worker")
+        {
+            int code = Worker.Run(e.Args);
+            Shutdown(code);
+            return;
+        }
+
+        // Hard RAM limit for the island itself (default 30 MB, see Settings.json "RamLimitMb")
+        MemoryGuard.Apply(AppSettings.Load().RamLimitMb);
+
         // Allow only one copy (so startup + manual start never create two islands)
         _mutex = new Mutex(true, @"Local\LightIsland_SingleInstance", out bool isFirst);
         if (!isFirst)

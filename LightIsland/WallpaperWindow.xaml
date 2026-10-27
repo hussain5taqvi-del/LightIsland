@@ -19,6 +19,7 @@
     <Grid Margin="24,18,24,20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -40,8 +41,14 @@
 
         </Grid>
 
+        <!-- Categories (same as 4kwallpapers.com). Scroll sideways with the mouse wheel. -->
+        <ScrollViewer x:Name="ChipsHost" Grid.Row="1" Margin="0,12,0,0" VerticalScrollBarVisibility="Disabled"
+                      HorizontalScrollBarVisibility="Hidden" PreviewMouseWheel="Chips_Wheel">
+            <StackPanel x:Name="Chips" Orientation="Horizontal" />
+        </ScrollViewer>
+
         <!-- Wallpaper cards -->
-        <Grid Grid.Row="1" Margin="-6,14,-6,0">
+        <Grid Grid.Row="2" Margin="-6,14,-6,0">
             <ScrollViewer x:Name="Scroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                           SizeChanged="Scroll_SizeChanged">
                 <UniformGrid x:Name="Cards" Columns="4" VerticalAlignment="Top" Margin="0,0,4,0" />
@@ -52,7 +59,7 @@
         </Grid>
 
         <!-- Bottom bar -->
-        <Grid Grid.Row="2" Margin="0,14,0,0">
+        <Grid Grid.Row="3" Margin="0,14,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />

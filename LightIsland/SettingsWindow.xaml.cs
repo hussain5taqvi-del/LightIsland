@@ -38,6 +38,7 @@ public partial class SettingsWindow : Window
         FahrCheck.IsChecked = _s.UseFahrenheit;
         Hour24Check.IsChecked = _s.Use24Hour;
         StartupCheck.IsChecked = StartupManager.IsEnabled;
+        RingKeyText.Text = KeyName(_s.RingKey);
         _ready = true;
     }
 
@@ -383,6 +384,68 @@ public partial class SettingsWindow : Window
         if (!_ready) return;
         _s.Use24Hour = Hour24Check.IsChecked == true;
         _main.RefreshClock();
+    }
+
+    // ---------- File ring key ----------
+
+    private bool _capturingKey;
+
+    private static string KeyName(int vk)
+    {
+        switch (vk)
+        {
+            case 0xA0: return "Left Shift";
+            case 0xA1: return "Right Shift";
+            case 0xA2: return "Left Ctrl";
+            case 0xA3: return "Right Ctrl";
+            case 0xA4: return "Left Alt";
+            case 0xA5: return "Right Alt";
+            case 0x5B: return "Left Win";
+            case 0x5C: return "Right Win";
+            case 0x20: return "Space";
+            case 0xC0: return "` (backtick)";
+        }
+        string n = System.Windows.Input.KeyInterop.KeyFromVirtualKey(vk).ToString();
+        if (n.Length == 2 && n[0] == 'D' && char.IsDigit(n[1])) n = n.Substring(1);
+        return n == "None" ? "Key " + vk : n;
+    }
+
+    private void RingKey_Click(object sender, MouseButtonEventArgs e)
+    {
+        _capturingKey = true;
+        RingKeyText.Text = "Press a key...";
+        Focus();
+    }
+
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+        if (_capturingKey)
+        {
+            e.Handled = true;
+            Key k = e.Key == Key.System ? e.SystemKey : e.Key == Key.ImeProcessed ? e.ImeProcessedKey : e.Key;
+            if (k == Key.None) return;
+            _capturingKey = false;
+            if (k == Key.Escape) { RingKeyText.Text = KeyName(_s.RingKey); return; }
+
+            int vk = KeyInterop.VirtualKeyFromKey(k);
+            if (vk < 8 || vk > 254 || k == Key.Tab || k == Key.Enter)
+            {
+                RingKeyText.Text = KeyName(_s.RingKey);
+                return;
+            }
+            _s.RingKey = vk;
+            _s.Save();
+            _main.ApplyTaskSettings();
+            RingKeyText.Text = KeyName(vk);
+            return;
+        }
+        base.OnPreviewKeyDown(e);
+    }
+
+    protected override void OnDeactivated(EventArgs e)
+    {
+        base.OnDeactivated(e);
+        if (_capturingKey) { _capturingKey = false; RingKeyText.Text = KeyName(_s.RingKey); }
     }
 
     private void Startup_Changed(object sender, RoutedEventArgs e)

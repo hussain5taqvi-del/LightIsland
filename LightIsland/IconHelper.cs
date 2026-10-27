@@ -80,6 +80,10 @@ public static class IconHelper
 
             if (!string.IsNullOrWhiteSpace(target) && File.Exists(target))
                 return FromIconFile(target, 0);
+
+            // Shortcuts to special items (This PC, Recycle Bin, folders...): icon of the item the shortcut points to
+            var viaPidl = FromShortcutPidl(lnk);
+            if (viaPidl != null) return viaPidl;
         }
         catch
         {
@@ -87,6 +91,53 @@ public static class IconHelper
         }
         return null;
     }
+
+    private static ImageSource? FromShortcutPidl(string lnk)
+    {
+        IntPtr pidl = IntPtr.Zero;
+        try
+        {
+            var link = (IShellLinkW)new ShellLinkCom();
+            ((IPersistFile)link).Load(lnk, 0);
+            link.GetIDList(out pidl);
+            if (pidl == IntPtr.Zero) return null;
+
+            var info = new SHFILEINFO();
+            // SHGFI_PIDL | SHGFI_ICON | SHGFI_LARGEICON
+            if (SHGetFileInfoPidl(pidl, 0, ref info, (uint)Marshal.SizeOf<SHFILEINFO>(), 0x8 | 0x100) == IntPtr.Zero || info.hIcon == IntPtr.Zero)
+                return null;
+            try
+            {
+                var bs = Imaging.CreateBitmapSourceFromHIcon(info.hIcon, Int32Rect.Empty, BitmapSizeOptions.FromWidthAndHeight(32, 32));
+                bs.Freeze();
+                return bs;
+            }
+            finally { DestroyIcon(info.hIcon); }
+        }
+        catch { return null; }
+        finally { if (pidl != IntPtr.Zero) Marshal.FreeCoTaskMem(pidl); }
+    }
+
+    [ComImport, Guid("00021401-0000-0000-C000-000000000046")]
+    private class ShellLinkCom { }
+
+    [ComImport, Guid("000214F9-0000-0000-C000-000000000046"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IShellLinkW
+    {
+        void GetPath([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder file, int max, IntPtr findData, uint flags);
+        void GetIDList(out IntPtr pidl);
+    }
+
+    [ComImport, Guid("0000010b-0000-0000-C000-000000000046"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IPersistFile
+    {
+        void GetClassID(out Guid id);
+        [PreserveSig] int IsDirty();
+        void Load([MarshalAs(UnmanagedType.LPWStr)] string file, int mode);
+    }
+
+    [DllImport("shell32.dll", EntryPoint = "SHGetFileInfoW", CharSet = CharSet.Unicode)]
+    private static extern IntPtr SHGetFileInfoPidl(IntPtr pidl, uint attrs, ref SHFILEINFO info, uint size, uint flags);
 
     private static ImageSource? FromIconFile(string file, int index)
     {

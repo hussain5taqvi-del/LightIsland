@@ -88,13 +88,20 @@ public sealed class MediaService
     private void OnPlaybackChanged(GlobalSystemMediaTransportControlsSession s, PlaybackInfoChangedEventArgs a) => _ = RefreshAsync();
     private void OnTimelineChanged(GlobalSystemMediaTransportControlsSession s, TimelinePropertiesChangedEventArgs a) => TimelineChanged?.Invoke();
 
+    // Newest refresh wins: an older, slower refresh must never overwrite a newer one
+    private int _gen;
+    private int _artTries;
+    private const int MaxArtTries = 12;
+
     private async Task RefreshAsync()
     {
+        int gen = ++_gen;
         var s = _session;
         if (s == null)
         {
             _artKey = "";
             _artBytes = null;
+            _artTries = 0;
             Changed?.Invoke("", "", false, null);
             return;
         }
@@ -102,21 +109,43 @@ public sealed class MediaService
         try
         {
             var props = await s.TryGetMediaPropertiesAsync();
+            if (gen != _gen) return;
+
             var info = s.GetPlaybackInfo();
             bool playing = info.PlaybackStatus ==
                            GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
 
             string title = props.Title ?? "";
             string artist = props.Artist ?? "";
+            bool hasSong = title.Length > 0;
 
+            // New song: forget the old cover right away (so it never shows the wrong one)
             string key = title + "|" + artist;
             if (key != _artKey)
             {
                 _artKey = key;
-                _artBytes = await ReadThumbnailAsync(props.Thumbnail);
+                _artBytes = null;
+                _artTries = 0;
+            }
+
+            // Many players announce the new title first and the cover a moment later.
+            // So a missing cover is NOT remembered: it is tried again (up to MaxArtTries times).
+            if (_artBytes == null && hasSong && _artTries < MaxArtTries)
+            {
+                _artTries++;
+                var bytes = await ReadThumbnailAsync(props.Thumbnail);
+                if (gen != _gen) return;
+                _artBytes = bytes;
             }
 
             Changed?.Invoke(title, artist, playing, _artBytes);
+
+            // Still no cover: look again shortly (stops by itself when a newer event arrives)
+            if (_artBytes == null && hasSong && _artTries < MaxArtTries)
+            {
+                await Task.Delay(700);
+                if (gen == _gen) _ = RefreshAsync();
+            }
         }
         catch
         {
