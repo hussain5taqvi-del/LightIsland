@@ -47,11 +47,17 @@ if (-not $a) { throw ('whisper.cpp: no Windows x64 zip. Releases seen: ' + ($nam
 Unpack (Get-File $a.browser_download_url $a.name) (Join-Path $voice 'whisper')
 
 Write-Host '[voice 2/4] llama.cpp'
-$rel = Invoke-RestMethod -Uri 'https://api.github.com/repos/ggml-org/llama.cpp/releases/latest' -Headers $ua
-Write-Host ("  assets: " + (($rel.assets | ForEach-Object { $_.name } | Where-Object { $_ -match 'win' }) -join ', '))
-$a = $rel.assets | Where-Object { $_.name -match 'bin-win-cpu-x64\.zip$' } | Select-Object -First 1
-if (-not $a) { $a = $rel.assets | Where-Object { $_.name -match 'win.*(avx2|cpu).*x64.*\.zip$' -and $_.name -notmatch 'cudart|cuda|vulkan|hip|sycl|opencl' } | Select-Object -First 1 }
-if (-not $a) { throw 'llama.cpp: no Windows CPU zip in the latest release' }
+$a = $null
+$names = @()
+foreach ($rel in (Invoke-RestMethod -Uri 'https://api.github.com/repos/ggml-org/llama.cpp/releases?per_page=8' -Headers $ua)) {
+    $win = $rel.assets | Where-Object { $_.name -match 'win' -and $_.name -match '\.zip$' }
+    $names += ($rel.tag_name + ': ' + (($win | ForEach-Object { $_.name }) -join ' '))
+    $a = $win | Where-Object { $_.name -match 'cpu.*x64|x64.*cpu' -and $_.name -notmatch 'cudart|cuda|vulkan|hip|sycl|opencl|arm' } | Select-Object -First 1
+    if (-not $a) { $a = $win | Where-Object { $_.name -match 'avx2.*x64|x64.*avx2' -and $_.name -notmatch 'cudart|cuda|vulkan|hip|sycl|opencl' } | Select-Object -First 1 }
+    if ($a) { break }
+}
+if (-not $a) { throw ('llama.cpp: no Windows CPU zip. Releases seen: ' + ($names -join ' | ')) }
+Write-Host ('  using ' + $a.name)
 Unpack (Get-File $a.browser_download_url $a.name) (Join-Path $voice 'llama')
 
 Write-Host '[voice 3/4] speech model'
