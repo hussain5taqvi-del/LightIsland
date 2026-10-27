@@ -35,11 +35,15 @@ function Unpack($zip, $dest) {
 }
 
 Write-Host '[voice 1/4] whisper.cpp'
-$rel = Invoke-RestMethod -Uri 'https://api.github.com/repos/ggml-org/whisper.cpp/releases/latest' -Headers $ua
-Write-Host ("  assets: " + (($rel.assets | ForEach-Object { $_.name }) -join ', '))
-$a = $rel.assets | Where-Object { $_.name -match '^whisper-bin-x64\.zip$' } | Select-Object -First 1
-if (-not $a) { $a = $rel.assets | Where-Object { $_.name -match 'bin.*x64.*\.zip$' -and $_.name -notmatch 'cublas|blas|Win32' } | Select-Object -First 1 }
-if (-not $a) { throw 'whisper.cpp: no Windows x64 zip in the latest release' }
+# the newest release that ships Windows x64 binaries (not every release does)
+$a = $null
+$names = @()
+foreach ($rel in (Invoke-RestMethod -Uri 'https://api.github.com/repos/ggml-org/whisper.cpp/releases?per_page=15' -Headers $ua)) {
+    $names += ($rel.tag_name + ': ' + (($rel.assets | ForEach-Object { $_.name }) -join ' '))
+    $a = $rel.assets | Where-Object { $_.name -match '^whisper-bin-x64\.zip$' } | Select-Object -First 1
+    if ($a) { break }
+}
+if (-not $a) { throw ('whisper.cpp: no Windows x64 zip. Releases seen: ' + ($names -join ' | ')) }
 Unpack (Get-File $a.browser_download_url $a.name) (Join-Path $voice 'whisper')
 
 Write-Host '[voice 2/4] llama.cpp'
