@@ -51,6 +51,26 @@ jobs:
       - name: Engines (yt-dlp, deno, Filee)
         shell: pwsh
         run: ./tools/get-engines.ps1 -Release "$PWD/release"
+      - name: Smoke test (Filee CLI + yt-dlp)
+        shell: pwsh
+        run: |
+          $out = @()
+          $out += "ls: " + ((Get-ChildItem release -Name) -join ', ')
+          $out += "filee: " + ((Get-ChildItem release/filee -Name | Select-Object -First 25) -join ', ')
+          $out += "engines: " + ((Get-ChildItem release/filee/engines -Name -ErrorAction SilentlyContinue) -join ', ')
+          $f = "release/filee/filee-cli.exe"
+          $out += "--- formats jpg"
+          $out += (& $f formats jpg 2>&1 | Out-String)
+          Add-Type -AssemblyName System.Drawing
+          $bmp = New-Object System.Drawing.Bitmap 40,40
+          $bmp.Save("$PWD/t.png", [System.Drawing.Imaging.ImageFormat]::Png)
+          $out += "--- convert png->webp"
+          $out += (& $f convert "$PWD/t.png" --to webp --json 2>&1 | Out-String)
+          $out += "exit " + $LASTEXITCODE
+          $out += "--- yt-dlp"
+          $out += (& release/engines/yt-dlp.exe --version 2>&1 | Out-String)
+          $out += (& release/engines/deno.exe --version 2>&1 | Out-String)
+          Write-Host ("::notice title=Smoke::" + (($out -join "`n") -replace "`r","" -replace "%","%25" -replace "`n","%0A"))
       - uses: actions/upload-artifact@v4
         with:
           name: LightIsland-release
