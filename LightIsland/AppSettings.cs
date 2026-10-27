@@ -72,6 +72,7 @@ public sealed class AppSettings
     public int DlLimitMBps { get; set; } = 4;           // 0 = unlimited; keeps the rest of the PC online
     public int RamLimitMb { get; set; } = 30;          // hard limit for the island process
     public List<AutoDeleteItem> AutoDelete { get; set; } = new();
+    public bool PerfLog { get; set; }                  // writes perf.log with the timing of every animation (off by default)
     public int RingKey { get; set; } = 0x58;           // hold this key on a selected file: the ring is open until it is let go (virtual-key code, default X)
     public Dictionary<string, List<string>> RingPins { get; set; } = new();   // formats pinned to the front of the ring, per file type
 

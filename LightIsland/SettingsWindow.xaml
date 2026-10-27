@@ -311,6 +311,15 @@
                     </Grid>
                     <Border Height="1" Background="{StaticResource Hairline}" Margin="16,0,0,0" />
                     <Grid Margin="14,9">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Record animation timing" Foreground="White" />
+                            <TextBlock Text="For fixing lag: writes %AppData%\LightIsland\perf.log" Foreground="#99EBEBF5" FontSize="11" Margin="0,2,0,0" />
+                        </StackPanel>
+                        <CheckBox x:Name="PerfCheck" Style="{StaticResource Switch}" HorizontalAlignment="Right"
+                                  Checked="Perf_Changed" Unchecked="Perf_Changed" />
+                    </Grid>
+                    <Border Height="1" Background="{StaticResource Hairline}" Margin="16,0,0,0" />
+                    <Grid Margin="14,9">
                         <TextBlock Text="Start with Windows" Foreground="White" VerticalAlignment="Center" />
                         <CheckBox x:Name="StartupCheck" Style="{StaticResource Switch}" HorizontalAlignment="Right"
                                   Checked="Startup_Changed" Unchecked="Startup_Changed" />

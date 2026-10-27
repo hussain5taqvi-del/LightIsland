@@ -247,3 +247,6 @@ FFmpeg, Pandoc, Ghostscript, 7-Zip, rhwp and yt-dlp are separate programs under 
 - Downloads never depend on the Downloads page: close the island, the downloads keep going in the background (a message appears when each is done).
 - Fewer failed downloads: up to three tries per video. Try 2 refreshes yt-dlp first and asks for whatever format the site really offers; try 3 uses IPv4 and other clients. Private videos, sign-in walls and offline PCs are not retried. More network retries / timeouts inside yt-dlp.
 - Smoother animations: the island is drawn as one picture while it closes (as it already was while opening); page changes build the new page first, then slide both pages as pictures; the ring's shadow is drawn once instead of on every frame.
+
+## 1.4.3
+- Settings → General → **Record animation timing**: while on, every animation is measured frame by frame and written to `%AppData%\LightIsland\perf.log` (render mode, dropped frames, CPU, RAM). Off by default; send the file to get lag fixed with real numbers.

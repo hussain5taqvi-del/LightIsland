@@ -68,6 +68,7 @@ public partial class MainWindow
         index = ((index % ViewCount) + ViewCount) % ViewCount;
         if (index == _view) return;
 
+        PerfLog.Mark("page " + _view + " -> " + index, 800);
         Grid oldPage = _pages[_view];
         Grid newPage = _pages[index];
         _view = index;

@@ -39,6 +39,7 @@ public partial class SettingsWindow : Window
         Hour24Check.IsChecked = _s.Use24Hour;
         StartupCheck.IsChecked = StartupManager.IsEnabled;
         RingKeyText.Text = KeyName(_s.RingKey);
+        PerfCheck.IsChecked = _s.PerfLog;
         _ready = true;
     }
 
@@ -446,6 +447,14 @@ public partial class SettingsWindow : Window
     {
         base.OnDeactivated(e);
         if (_capturingKey) { _capturingKey = false; RingKeyText.Text = KeyName(_s.RingKey); }
+    }
+
+    private void Perf_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_ready) return;
+        _s.PerfLog = PerfCheck.IsChecked == true;
+        _s.Save();
+        _main.ApplyTaskSettings();
     }
 
     private void Startup_Changed(object sender, RoutedEventArgs e)
