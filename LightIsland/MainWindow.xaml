@@ -389,33 +389,6 @@
                             </StackPanel>
                         </Grid>
 
-                        <!-- Page 2: Favorite apps -->
-                        <Grid x:Name="PageApps" Visibility="Collapsed">
-                            <Grid.RenderTransform><TranslateTransform /></Grid.RenderTransform>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                            </Grid.RowDefinitions>
-
-                            <Grid Margin="0,0,0,6" Height="20">
-                                <TextBlock x:Name="AppsTitle" Text="Favorite apps" Style="{StaticResource PageTitle}" />
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                    <TextBlock x:Name="AppsEditBtn" Text="Edit" FontSize="12" FontWeight="SemiBold" Cursor="Hand"
-                                               Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,14,0"
-                                               ToolTip="Remove or rearrange apps" MouseLeftButtonUp="AppsEdit_Click" />
-                                    <TextBlock Style="{StaticResource Gear}" Text="&#xE710;" ToolTip="Add app"
-                                               VerticalAlignment="Center" MouseLeftButtonUp="AddApp_Click" />
-                                </StackPanel>
-                            </Grid>
-
-                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Hidden"
-                                          HorizontalScrollBarVisibility="Disabled">
-                                <WrapPanel x:Name="AppsPanel" Margin="0,7,7,0" />
-                            </ScrollViewer>
-                            <TextBlock x:Name="AppsHint" Grid.Row="1" Style="{StaticResource Hint}"
-                                       Text="Click + or drop an app here" />
-                        </Grid>
-
                         <!-- Page 3: Clock + Weather (time and date on the left, weather on the right) -->
                         <Grid x:Name="PageClock" Visibility="Collapsed">
                             <Grid.RenderTransform><TranslateTransform /></Grid.RenderTransform>

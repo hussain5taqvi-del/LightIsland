@@ -13,12 +13,12 @@ using System.Windows.Threading;
 
 namespace LightIsland;
 
-// Pages inside the expanded island: Media, Favorite apps, Clock + Weather, Calendar, System, Downloads, Clipboard.
+// Pages inside the expanded island: Media, Clock + Weather, Calendar, System, Downloads, Clipboard.
 // Swap pages with the mouse wheel or the dots.
 public partial class MainWindow
 {
-    private const int ViewCount = 7;
-    private const int ViewMedia = 0, ViewApps = 1, ViewClock = 2, ViewCal = 3, ViewSys = 4, ViewDl = 5, ViewClip = 6;
+    private const int ViewCount = 6;
+    private const int ViewMedia = 0, ViewClock = 1, ViewCal = 2, ViewSys = 3, ViewDl = 4, ViewClip = 5;
 
     private static readonly FontFamily GlyphFont = new("Segoe MDL2 Assets");
     private static Brush TileBrush = MakeFrozen(new SolidColorBrush(Color.FromRgb(0x26, 0x26, 0x28)));
@@ -38,7 +38,7 @@ public partial class MainWindow
 
     private void InitViews()
     {
-        _pages = new[] { PageMedia, PageApps, PageClock, PageCal, PageSys, PageDl, PageClip };
+        _pages = new[] { PageMedia, PageClock, PageCal, PageSys, PageDl, PageClip };
 
         for (int i = 0; i < ViewCount; i++)
         {
@@ -171,7 +171,6 @@ public partial class MainWindow
         switch (index)
         {
             case ViewCal: BuildCalendar(); break;
-            case ViewApps: _editApps = false; RefreshApps(); break;
             case ViewClock: UpdateClock(); break;
             case ViewDl: RenderDl(); break;
             case ViewClip: RenderClip(); break;
@@ -212,7 +211,7 @@ public partial class MainWindow
     }
 
     // ---------- Drag and drop ----------
-    // Drop an app or file on the island: it is added to Favorite apps.
+    // Drop an app or file on the island: it is added to the apps ring.
 
     private void Island_DragEnter(object sender, DragEventArgs e)
     {
@@ -221,9 +220,6 @@ public partial class MainWindow
         e.Effects = DragDropEffects.Copy;
         e.Handled = true;
 
-        _leaveTimer.Stop();
-        if (!_expanded) Animate(true);
-        if (_view != ViewApps) GoToView(ViewApps, 1);
     }
 
     private void Island_DragOver(object sender, DragEventArgs e)
@@ -247,10 +243,11 @@ public partial class MainWindow
         if (e.Data.GetData(DataFormats.FileDrop) is not string[] files) return;
         e.Handled = true;
 
+        int before = _s.FavoriteApps.Count;
         foreach (string f in files) AddUnique(_s.FavoriteApps, f, 40);
         _s.Save();
-        if (_view != ViewApps) GoToView(ViewApps, 1);
-        else RefreshApps();
+        int added = _s.FavoriteApps.Count - before;
+        ShowHud("\uE73E", added > 0 ? "Added to the apps ring" : "Already in the apps ring", null, null, 2200);
     }
 
     // ---------- Helpers ----------
@@ -343,240 +340,5 @@ public partial class MainWindow
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         return row;
-    }
-
-    // ---------- Page 2: Favorite apps ----------
-    // Click = open. "Edit" (or right click on an app) = edit mode: tap the red x to remove an app,
-    // drag an app to a new place to rearrange. No pop-up menu is used (pop-ups were the cause of the crash).
-
-    private bool _editApps;
-    private Border? _dragTile;
-    private bool _dragMoved;
-
-    private void SetEditApps(bool on)
-    {
-        _editApps = on;
-        if (!on) EndDrag();
-        RefreshApps();
-    }
-
-    private void AppsEdit_Click(object sender, MouseButtonEventArgs e)
-    {
-        e.Handled = true;
-        SetEditApps(!_editApps);
-    }
-
-    private void EndDrag()
-    {
-        try
-        {
-            if (_dragTile != null && _dragTile.IsMouseCaptured) _dragTile.ReleaseMouseCapture();
-        }
-        catch { }
-        _dragTile = null;
-        _holdOpen = false;
-    }
-
-    // Saves the order that is currently shown
-    private void SaveAppOrder()
-    {
-        var order = new List<string>();
-        foreach (UIElement c in AppsPanel.Children)
-            if (c is Border b && b.Tag is string s) order.Add(s);
-        if (order.Count == _s.FavoriteApps.Count)
-        {
-            _s.FavoriteApps.Clear();
-            _s.FavoriteApps.AddRange(order);
-            _s.Save();
-        }
-    }
-
-    private void RefreshApps()
-    {
-        try
-        {
-            AppsPanel.Children.Clear();
-            AppsHint.Visibility = _s.FavoriteApps.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-            if (_s.FavoriteApps.Count == 0) _editApps = false;
-
-            AppsEditBtn.Text = _editApps ? "Done" : "Edit";
-            AppsEditBtn.Visibility = _s.FavoriteApps.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
-            AppsTitle.Text = _editApps ? "Drag to rearrange \u00B7 \u2715 to remove" : "Favorite apps";
-
-            foreach (string path in _s.FavoriteApps.ToArray())
-                AppsPanel.Children.Add(MakeAppTile(path));
-        }
-        catch
-        {
-            // never let a refresh problem close the app
-        }
-    }
-
-    private Border MakeAppTile(string p)
-    {
-        var tile = new Border
-        {
-            Width = 44,
-            Height = 44,
-            CornerRadius = new CornerRadius(12),
-            Background = TileBrush,
-            BorderBrush = (Brush)Resources["TileStroke"],
-            BorderThickness = new Thickness(1),
-            Margin = new Thickness(0, 0, 8, 8),
-            Cursor = _editApps ? Cursors.SizeAll : Cursors.Hand,
-            ToolTip = DisplayName(p),
-            Tag = p
-        };
-
-        var inner = new Grid();
-
-        ImageSource? icon = IconHelper.Get(p);
-        if (icon != null)
-        {
-            inner.Children.Add(new Image
-            {
-                Source = icon,
-                Width = 26,
-                Height = 26,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            });
-        }
-        else
-        {
-            var g = GlyphBlock("\uE8A5", 18, null);
-            g.HorizontalAlignment = HorizontalAlignment.Center;
-            inner.Children.Add(g);
-        }
-
-        if (_editApps)
-        {
-            // Small red x in the corner: removes the app
-            var x = new Border
-            {
-                Width = 18,
-                Height = 18,
-                CornerRadius = new CornerRadius(9),
-                Background = new SolidColorBrush(Color.FromRgb(0xFF, 0x45, 0x3A)),
-                HorizontalAlignment = HorizontalAlignment.Right,
-                VerticalAlignment = VerticalAlignment.Top,
-                Margin = new Thickness(0, -6, -6, 0),
-                Cursor = Cursors.Hand,
-                ToolTip = "Remove"
-            };
-            var xg = GlyphBlock("\uE711", 8, Brushes.White);
-            xg.HorizontalAlignment = HorizontalAlignment.Center;
-            x.Child = xg;
-            x.MouseLeftButtonDown += (_, ev) =>
-            {
-                ev.Handled = true;
-                RemoveFavorite(p);
-            };
-            inner.Children.Add(x);
-        }
-
-        tile.Child = inner;
-
-        tile.MouseEnter += (_, _) => { if (_dragTile == null) tile.Background = HoverBrush; };
-        tile.MouseLeave += (_, _) => { if (_dragTile != tile) tile.Background = TileBrush; };
-
-        if (!_editApps)
-        {
-            tile.MouseLeftButtonUp += (_, ev) =>
-            {
-                ev.Handled = true;
-                OpenItem(p);
-            };
-            // Right click = edit mode (no pop-up menu)
-            tile.MouseRightButtonUp += (_, ev) =>
-            {
-                ev.Handled = true;
-                SetEditApps(true);
-            };
-        }
-        else
-        {
-            tile.MouseLeftButtonDown += (_, ev) =>
-            {
-                ev.Handled = true;
-                _dragTile = tile;
-                _dragMoved = false;
-                _holdOpen = true; // the island stays open while dragging
-                tile.CaptureMouse();
-            };
-            tile.MouseMove += (_, ev) =>
-            {
-                if (_dragTile != tile || !tile.IsMouseCaptured) return;
-                Point pos = ev.GetPosition(AppsPanel);
-                int from = AppsPanel.Children.IndexOf(tile);
-                for (int i = 0; i < AppsPanel.Children.Count; i++)
-                {
-                    if (AppsPanel.Children[i] is not FrameworkElement c || ReferenceEquals(c, tile)) continue;
-                    Point o = c.TranslatePoint(new Point(0, 0), AppsPanel);
-                    if (pos.X >= o.X && pos.X < o.X + c.ActualWidth + 8 && pos.Y >= o.Y && pos.Y < o.Y + c.ActualHeight + 8)
-                    {
-                        AppsPanel.Children.RemoveAt(from);
-                        AppsPanel.Children.Insert(i, tile);
-                        _dragMoved = true;
-                        break;
-                    }
-                }
-            };
-            tile.MouseLeftButtonUp += (_, ev) =>
-            {
-                ev.Handled = true;
-                if (_dragTile != tile) return;
-                bool moved = _dragMoved;
-                EndDrag();
-                if (moved) SaveAppOrder();
-                tile.Background = TileBrush;
-                if (!Island.IsMouseOver) Animate(false);
-            };
-            tile.LostMouseCapture += (_, _) =>
-            {
-                if (_dragTile == tile)
-                {
-                    bool moved = _dragMoved;
-                    _dragTile = null;
-                    _holdOpen = false;
-                    if (moved) SaveAppOrder();
-                }
-            };
-        }
-
-        return tile;
-    }
-
-    private void RemoveFavorite(string path)
-    {
-        EndDrag();
-        _s.FavoriteApps.RemoveAll(f => string.Equals(f, path, StringComparison.OrdinalIgnoreCase));
-        _s.Save();
-        RefreshApps();
-    }
-
-    private void AddApp_Click(object sender, MouseButtonEventArgs e)
-    {
-        _holdOpen = true;
-
-        var dlg = new Microsoft.Win32.OpenFileDialog
-        {
-            Title = "Add favorite apps",
-            Filter = "Apps and shortcuts|*.exe;*.lnk;*.bat;*.url|All files|*.*",
-            CheckFileExists = true,
-            Multiselect = true
-        };
-        bool? ok = dlg.ShowDialog(this);
-
-        _holdOpen = false;
-
-        if (ok == true)
-        {
-            foreach (string f in dlg.FileNames) AddUnique(_s.FavoriteApps, f, 40);
-            _s.Save();
-            RefreshApps();
-        }
-
-        if (!Island.IsMouseOver) Animate(false);
     }
 }

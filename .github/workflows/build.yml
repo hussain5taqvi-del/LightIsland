@@ -5,10 +5,6 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
-      probe:
-        description: "Test the offline voice engines (whisper + Qwen)"
-        type: boolean
-        default: false
       package:
         description: "Also build the full release folder (engines, Filee) and upload it"
         type: boolean
@@ -38,56 +34,6 @@ jobs:
           }
           exit $code
 
-  voice-probe:
-    if: github.event_name == 'workflow_dispatch' && inputs.probe
-    runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: LightIsland
-    steps:
-      - uses: actions/checkout@v4
-      - name: Fetch voice engines
-        shell: pwsh
-        run: |
-          try {
-            ./tools/get-voice.ps1 -Release "$PWD/probe" *>&1 | Tee-Object -Variable log | Out-Host
-          } catch {
-            $m = ($_ | Out-String) + "`n" + (($log | Out-String))
-            Write-Host ("::error title=FetchError::" + ($m -replace "`r","" -replace "%","%25" -replace "`n","%0A"))
-            exit 1
-          }
-      - name: Probe whisper + llama
-        shell: pwsh
-        run: |
-          $out = @()
-          $v = "$PWD/probe/voice"
-          $out += "whisper: " + ((Get-ChildItem $v/whisper -Name | Select-Object -First 30) -join ', ')
-          $out += "llama: " + ((Get-ChildItem $v/llama -Name | Where-Object { $_ -like '*.exe' }) -join ', ')
-          $out += "models: " + ((Get-ChildItem $v/models | ForEach-Object { $_.Name + ' ' + [int]($_.Length/1MB) + 'MB' }) -join ', ')
-          # speech made by Windows itself, 16 kHz mono
-          $wav = "$PWD/probe/t.wav"
-          powershell -NoProfile -Command "Add-Type -AssemblyName System.Speech; `$s = New-Object System.Speech.Synthesis.SpeechSynthesizer; `$s.SetOutputToWaveFile('$wav', (New-Object System.Speech.AudioFormat.SpeechAudioFormatInfo(16000,'Sixteen','Mono'))); `$s.Speak('Open YouTube and play the latest video from MrBeast'); `$s.Dispose()"
-          $out += "wav bytes: " + (Get-Item $wav).Length
-          $w = (Get-ChildItem $v/whisper -Filter whisper-cli.exe -Recurse | Select-Object -First 1).FullName
-          $sw = [Diagnostics.Stopwatch]::StartNew()
-          $txt = & $w -m "$v/models/ggml-base.bin" -f $wav -nt -np -l auto 2>&1 | Out-String
-          $out += "--- whisper (" + $sw.ElapsedMilliseconds + " ms) exit " + $LASTEXITCODE
-          $out += $txt
-          # language model with a strict JSON answer
-          @'
-          {"type":"object","properties":{"action":{"enum":["youtube","open_site","web_search","open_app","volume","timer","food_search","unknown"]},"query":{"type":"string"},"channel":{"type":"string"},"days_ago":{"type":"integer"},"value":{"type":"integer"}},"required":["action"]}
-          '@ | Set-Content "$PWD/probe/schema.json"
-          $sys = "You turn a spoken command into one JSON action. Actions: youtube (query, channel, days_ago), open_site (query=site), web_search (query), open_app (query=app name), volume (value 0-100), timer (value=minutes), food_search (query), unknown."
-          $prompt = "<|im_start|>system`n$sys<|im_end|>`n<|im_start|>user`n" + $txt.Trim() + "<|im_end|>`n<|im_start|>assistant`n"
-          $ll = Get-ChildItem $v/llama -Filter llama-completion.exe | Select-Object -First 1
-          if (-not $ll) { $ll = Get-ChildItem $v/llama -Filter llama-cli.exe | Select-Object -First 1 }
-          $out += "runner: " + $ll.Name
-          $sw.Restart()
-          $res = & $ll.FullName -m "$v/models/qwen2.5-1.5b-instruct-q4_k_m.gguf" -p $prompt -n 100 --temp 0 -jf "$PWD/probe/schema.json" -no-cnv -t 4 --no-display-prompt 2>&1 | Out-String
-          $out += "--- llama (" + $sw.ElapsedMilliseconds + " ms) exit " + $LASTEXITCODE
-          $out += $res
-          Write-Host ("::notice title=VoiceProbe::" + (($out -join "`n") -replace "`r","" -replace "%","%25" -replace "`n","%0A"))
-
   package:
     if: github.event_name == 'workflow_dispatch' && inputs.package
     needs: compile
@@ -105,9 +51,6 @@ jobs:
       - name: Engines (yt-dlp, deno, Filee)
         shell: pwsh
         run: ./tools/get-engines.ps1 -Release "$PWD/release"
-      - name: Voice engines (whisper, Qwen)
-        shell: pwsh
-        run: ./tools/get-voice.ps1 -Release "$PWD/release"
       - name: Smoke test (Filee CLI + yt-dlp)
         shell: pwsh
         run: |
@@ -124,7 +67,6 @@ jobs:
           $out += "--- convert png->webp"
           $out += (& $f convert "$PWD/t.png" --to webp --json 2>&1 | Out-String)
           $out += "exit " + $LASTEXITCODE
-          $out += "voice: " + ((Get-ChildItem release/voice -Recurse -Filter *.exe | ForEach-Object { $_.Name }) -join ', ')
           $out += "--- yt-dlp"
           $out += (& release/engines/yt-dlp.exe --version 2>&1 | Out-String)
           $out += (& release/engines/deno.exe --version 2>&1 | Out-String)

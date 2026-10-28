@@ -33,7 +33,7 @@ internal sealed class Job
     public string? Cache;             // hidden cache folder of a download (kept while paused)
 }
 
-internal sealed record ActionDef(string Id, string Label, string Icon, string? Fmt = null);
+internal sealed record ActionDef(string Id, string Label, string Icon, string? Fmt = null, ImageSource? Img = null);
 
 internal enum FileKind { Photo, Video, Pdf, Audio, Doc, Other }
 

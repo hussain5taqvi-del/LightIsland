@@ -83,12 +83,13 @@ internal sealed class SelectionService : IDisposable
     /// <summary>Raised on the UI thread when the held key is let go.</summary>
     public event Action? KeyReleased;
 
-    /// <summary>The key that is held to speak a command (works in every program). Raised on the UI thread.</summary>
-    public volatile int VoiceVk = 0x14; // Caps Lock
-    public volatile bool VoiceEnabled = true;
-    public event Action? VoiceDown, VoiceUp, VoiceCancel;
-    private volatile bool _voiceHeld;
-    private long _voiceTick;
+    /// <summary>The key that is held to open the apps ring (works in every program). Raised on the UI thread.</summary>
+    public volatile int AppsVk = 0x14; // Caps Lock
+    public volatile bool AppsEnabled = true;
+    public event Action? AppsDown, AppsUp, AppsCancel;
+    public bool AppsHeld => _appsHeld;
+    private volatile bool _appsHeld, _appsCancel;
+    private long _appsTick, _appsId;
 
     private volatile bool _held, _cancel;
     private long _holdId, _lastTick;
@@ -122,40 +123,46 @@ internal sealed class SelectionService : IDisposable
                     bool mod = IsModifier(trig);
                     long now = Environment.TickCount64;
 
-                    // Voice key: hold, speak, let go. A letter-like key (Caps Lock ...) is swallowed so it does nothing else;
-                    // a modifier key (Ctrl, Alt ...) is never swallowed.
-                    int vv = VoiceVk;
-                    if (VoiceEnabled && vv != trig)
+                    // Apps key: hold it and the ring of favorite apps opens, let go and it closes (or opens the app under
+                    // the cursor). A letter-like key (Caps Lock ...) is swallowed so it does nothing else; a modifier key
+                    // (Ctrl, Alt ...) is never swallowed and a shortcut such as Ctrl+C never opens the ring.
+                    int av = AppsVk;
+                    if (AppsEnabled && av != trig)
                     {
-                        bool vmod = IsModifier(vv);
-                        if (vk == vv)
+                        bool amod = IsModifier(av);
+                        if (vk == av)
                         {
                             if (down)
                             {
-                                if (_voiceHeld && now - _voiceTick < 1500)
+                                if (_appsHeld && now - _appsTick < 1500)
                                 {
-                                    _voiceTick = now;
-                                    return vmod ? CallNextHookEx(_hook, code, wParam, lParam) : (IntPtr)1;
+                                    _appsTick = now;
+                                    return amod ? CallNextHookEx(_hook, code, wParam, lParam) : (IntPtr)1;
                                 }
-                                if (!OtherModifierDown(vv))
+                                if (!OtherModifierDown(av))
                                 {
-                                    _voiceHeld = true;
-                                    _voiceTick = now;
-                                    _ui.BeginInvoke(new Action(() => VoiceDown?.Invoke()));
-                                    if (!vmod) return (IntPtr)1;
+                                    _appsHeld = true;
+                                    _appsCancel = false;
+                                    _appsTick = now;
+                                    long aid = ++_appsId;
+                                    Task.Delay(HoldMs).ContinueWith(_ =>
+                                    {
+                                        if (_appsHeld && !_appsCancel && _appsId == aid) _ui.BeginInvoke(new Action(() => AppsDown?.Invoke()));
+                                    });
+                                    if (!amod) return (IntPtr)1;
                                 }
                             }
-                            else if (up && _voiceHeld)
+                            else if (up && _appsHeld)
                             {
-                                _voiceHeld = false;
-                                _ui.BeginInvoke(new Action(() => VoiceUp?.Invoke()));
-                                if (!vmod) return (IntPtr)1;
+                                _appsHeld = false;
+                                _ui.BeginInvoke(new Action(() => AppsUp?.Invoke()));
+                                if (!amod) return (IntPtr)1;
                             }
                         }
-                        else if (down && _voiceHeld && vmod)
+                        else if (down && _appsHeld && amod)
                         {
-                            _voiceHeld = false; // Ctrl+C and the like: a shortcut, not a voice command
-                            _ui.BeginInvoke(new Action(() => VoiceCancel?.Invoke()));
+                            _appsCancel = true; // Ctrl+C and the like: a shortcut, not the apps key
+                            _ui.BeginInvoke(new Action(() => AppsCancel?.Invoke()));
                         }
                     }
 

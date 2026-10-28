@@ -76,7 +76,6 @@ public partial class MainWindow
         foreach (UIElement dot in Dots.Children)
             if (dot is System.Windows.Shapes.Shape sh) sh.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "TextBrush");
 
-        if (_view == ViewApps) RefreshApps();
     }
 
     /// <summary>Shows or hides the glass layers (fades them in / out).</summary>

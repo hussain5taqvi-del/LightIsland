@@ -72,9 +72,8 @@ public sealed class AppSettings
     public int DlLimitMBps { get; set; } = 4;           // 0 = unlimited; keeps the rest of the PC online
     public int RamLimitMb { get; set; } = 30;          // hard limit for the island process
     public List<AutoDeleteItem> AutoDelete { get; set; } = new();
-    public int VoiceKey { get; set; } = 0x14;          // hold to speak a command (virtual-key code, default Caps Lock)
-    public bool VoiceEnabled { get; set; } = true;
-    public List<string> VoiceAllow { get; set; } = new(); // actions the user chose "Always allow" for
+    public int AppsKey { get; set; } = 0x14;           // hold to open the ring of favorite apps (virtual-key code, default Caps Lock)
+    public bool AppsRing { get; set; } = true;
     public bool PerfLog { get; set; }                  // writes perf.log with the timing of every animation (off by default)
     public int RingKey { get; set; } = 0x58;           // hold this key on a selected file: the ring is open until it is let go (virtual-key code, default X)
     public Dictionary<string, List<string>> RingPins { get; set; } = new();   // formats pinned to the front of the ring, per file type
@@ -183,8 +182,7 @@ public sealed class AppSettings
         AutoDelete ??= new List<AutoDeleteItem>();
         RingPins ??= new Dictionary<string, List<string>>();
         RamLimitMb = Math.Clamp(RamLimitMb, 20, 400);
-        VoiceAllow ??= new List<string>();
-        if (VoiceKey < 8 || VoiceKey > 254 || VoiceKey == 0x1B || VoiceKey == 0x0D || VoiceKey == 0x09) VoiceKey = 0x14;
+        if (AppsKey < 8 || AppsKey > 254 || AppsKey == 0x1B || AppsKey == 0x0D || AppsKey == 0x09) AppsKey = 0x14;
         if (RingKey < 8 || RingKey > 254 || RingKey == 0x1B || RingKey == 0x0D || RingKey == 0x09) RingKey = 0x58;
         // These have no switch any more: always on / unlimited
         FileWheel = true;

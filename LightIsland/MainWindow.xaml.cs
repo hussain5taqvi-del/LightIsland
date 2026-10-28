@@ -456,7 +456,6 @@ public partial class MainWindow : Window
 
         bool wasExpanded = _expanded;
         _expanded = expand;
-        if (!expand && _editApps) { _editApps = false; EndDrag(); if (_view == ViewApps) RefreshApps(); }
         UpdateBarTimer();
         UpdateStatsTimer();
         UpdateProgressTimer();
@@ -622,7 +621,7 @@ public partial class MainWindow : Window
                 if (openToken != _animToken || !_expanded) return;
                 if (!wasExpanded) PrimeStats();
                 RefreshProgress();
-                if (_view != ViewMedia && _view != ViewApps) OnViewShown(_view);
+                if (_view != ViewMedia) OnViewShown(_view);
             }));
         }
         else

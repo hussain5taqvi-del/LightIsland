@@ -44,12 +44,20 @@ internal sealed class RadialWindow : Window
     private readonly Grid _hubFx = new();
     private readonly List<Canvas> _groups = new();
     private readonly DispatcherTimer _safety = new() { Interval = TimeSpan.FromSeconds(8) };
+    private readonly bool _releasePicks;
+    private readonly string _idleText;
+    private readonly Func<ActionDef, string?>? _remove;
+    private int _hovered = -1;
     private int _page;
     private bool _closing, _busy, _flipping;
 
     public RadialWindow(List<List<ActionDef>> pages, string title, ImageSource? fileIcon, bool light, Color accent,
-        Func<ActionDef, RingResult?> pick, Func<ActionDef, bool>? togglePin, Func<ActionDef, bool>? isPinned)
+        Func<ActionDef, RingResult?> pick, Func<ActionDef, bool>? togglePin, Func<ActionDef, bool>? isPinned,
+        bool releasePicks = false, string idleText = "Let go to close", Func<ActionDef, string?>? remove = null)
     {
+        _releasePicks = releasePicks;
+        _idleText = idleText;
+        _remove = remove;
         _pages = pages;
         _pick = pick;
         _togglePin = togglePin;
@@ -125,7 +133,7 @@ internal sealed class RadialWindow : Window
         _titleTx.FontWeight = FontWeights.Bold;
         _titleTx.Foreground = _text;
         _titleTx.HorizontalAlignment = HorizontalAlignment.Center;
-        _subTx.Text = "Let go to close";
+        _subTx.Text = _idleText;
         _subTx.FontSize = 9.5;
         _subTx.Foreground = _muted;
         _subTx.HorizontalAlignment = HorizontalAlignment.Center;
@@ -195,7 +203,7 @@ internal sealed class RadialWindow : Window
         double span = 360.0 / PerRing(n);
         _pageTx.Text = _pages.Count > 1 ? (page + 1) + " / " + _pages.Count : "";
         _pageTx.Visibility = _pages.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
-        _subTx.Text = _pages.Count > 1 ? "Tab for more" : "Let go to close";
+        _subTx.Text = _pages.Count > 1 ? "Tab for more" : _idleText;
 
         for (int i = 0; i < n; i++)
         {
@@ -227,7 +235,9 @@ internal sealed class RadialWindow : Window
             double rm = (Inner + Outer) / 2 + 1;
             double x = _c + rm * Math.Sin(mid), y = _c - rm * Math.Cos(mid);
             var iconBrush = new SolidColorBrush(_textC);
-            FrameworkElement iconEl = Icons.Make(def.Icon, 20, iconBrush, 1.8);
+            FrameworkElement iconEl = def.Img != null
+                ? new Image { Source = def.Img, Width = 24, Height = 24, IsHitTestVisible = false }
+                : Icons.Make(def.Icon, 20, iconBrush, 1.8);
             iconEl.HorizontalAlignment = HorizontalAlignment.Center;
             var labelBrush = new SolidColorBrush(_textC);
             var label = new TextBlock
@@ -265,6 +275,7 @@ internal sealed class RadialWindow : Window
             shape.MouseEnter += (_, _) =>
             {
                 if (_busy) return;
+                _hovered = idx;
                 fill.BeginAnimation(SolidColorBrush.ColorProperty, new ColorAnimation(_accent, TimeSpan.FromMilliseconds(90)));
                 iconBrush.BeginAnimation(SolidColorBrush.ColorProperty, new ColorAnimation(_onAccent, TimeSpan.FromMilliseconds(90)));
                 labelBrush.BeginAnimation(SolidColorBrush.ColorProperty, new ColorAnimation(_onAccent, TimeSpan.FromMilliseconds(90)));
@@ -275,6 +286,7 @@ internal sealed class RadialWindow : Window
             };
             shape.MouseLeave += (_, _) =>
             {
+                if (_hovered == idx) _hovered = -1;
                 if (_busy) return;
                 fill.BeginAnimation(SolidColorBrush.ColorProperty, new ColorAnimation(_fillC, TimeSpan.FromMilliseconds(130)));
                 iconBrush.BeginAnimation(SolidColorBrush.ColorProperty, new ColorAnimation(_textC, TimeSpan.FromMilliseconds(130)));
@@ -288,7 +300,20 @@ internal sealed class RadialWindow : Window
             shape.MouseRightButtonUp += (_, e) =>
             {
                 e.Handled = true;
-                if (_busy || _togglePin == null || def.Fmt == null) return;
+                if (_busy) return;
+                if (_remove != null && def.Id.StartsWith("app:", StringComparison.Ordinal))
+                {
+                    string? done = _remove(def);
+                    if (done != null)
+                    {
+                        Say(done);
+                        shape.IsHitTestVisible = false;
+                        group.Opacity = 0.2;
+                        _hovered = -1;
+                    }
+                    return;
+                }
+                if (_togglePin == null || def.Fmt == null) return;
                 bool now = _togglePin(def);
                 dot.Visibility = now ? Visibility.Visible : Visibility.Collapsed;
                 Say(now ? "Pinned " + def.Label : "Unpinned " + def.Label);
@@ -319,7 +344,7 @@ internal sealed class RadialWindow : Window
         _sayTimer.Tick += (_, _) =>
         {
             _sayTimer!.Stop();
-            if (!_busy) _subTx.Text = _pages.Count > 1 ? "Tab for more" : "Let go to close";
+            if (!_busy) _subTx.Text = _pages.Count > 1 ? "Tab for more" : _idleText;
         };
         _sayTimer.Start();
     }
@@ -330,6 +355,7 @@ internal sealed class RadialWindow : Window
     {
         if (_busy || _closing || _flipping || _pages.Count < 2) return;
         _flipping = true;
+        _hovered = -1;
         int next = ((_page + dir) % _pages.Count + _pages.Count) % _pages.Count;
         var ease = new CubicEase { EasingMode = EasingMode.EaseIn };
         var a = new DoubleAnimation(1, 0.04, TimeSpan.FromMilliseconds(95)) { EasingFunction = ease };
@@ -467,7 +493,9 @@ internal sealed class RadialWindow : Window
     /// <summary>The ring key was let go: the ring disappears (unless it is working; then it closes when done).</summary>
     public void ReleaseClose()
     {
-        if (!_busy) CloseOnce();
+        if (_busy || _closing) return;
+        if (_releasePicks && _hovered >= 0 && _hovered < _pages[_page].Count) { Pick(_hovered); return; }
+        CloseOnce();
     }
 
     public void CloseOnce()

@@ -39,7 +39,7 @@ public partial class MainWindow
         _sel.Requested += ShowWheel;
         _sel.KeyReleased += () => _wheel?.ReleaseClose();
         _sel.Problem += msg => ShowHud("\uE7BA", msg, null, null, 2200);
-        InitVoice();
+        InitAppsRing();
 
         ApplyTaskSettings();
 
@@ -76,7 +76,7 @@ public partial class MainWindow
     public void ApplyTaskSettings()
     {
         PerfLog.Enabled = _s.PerfLog;
-        if (_sel != null) { _sel.TriggerVk = _s.RingKey; _sel.VoiceVk = _s.VoiceKey; _sel.VoiceEnabled = _s.VoiceEnabled; }
+        if (_sel != null) { _sel.TriggerVk = _s.RingKey; _sel.AppsVk = _s.AppsKey; _sel.AppsEnabled = _s.AppsRing; }
         _sel?.SetEnabled(_s.FileWheel);
         _clipSvc?.SetEnabled(_s.LinkDetect || _s.ClipHistory);
         if (_view == ViewClip) RenderClip();
