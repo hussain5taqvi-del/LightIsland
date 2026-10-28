@@ -71,6 +71,21 @@ jobs:
           $out += (& release/engines/yt-dlp.exe --version 2>&1 | Out-String)
           $out += (& release/engines/deno.exe --version 2>&1 | Out-String)
           Write-Host ("::notice title=Smoke::" + (($out -join "`n") -replace "`r","" -replace "%","%25" -replace "`n","%0A"))
+      - name: Sizes
+        shell: pwsh
+        run: |
+          function Sz($p) { [math]::Round(((Get-ChildItem $p -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum)/1MB,1) }
+          $o = @()
+          foreach ($d in (Get-ChildItem release)) { $o += ($d.Name + ' = ' + $(if ($d.PSIsContainer) { Sz $d.FullName } else { [math]::Round($d.Length/1MB,1) }) + ' MB') }
+          $o += '--- release/engines'
+          foreach ($d in (Get-ChildItem release/engines)) { $o += ($d.Name + ' = ' + $(if ($d.PSIsContainer) { Sz $d.FullName } else { [math]::Round($d.Length/1MB,1) }) + ' MB') }
+          $o += '--- release/filee/engines'
+          foreach ($d in (Get-ChildItem release/filee/engines)) { $o += ($d.Name + ' = ' + (Sz $d.FullName) + ' MB') }
+          $o += '--- release/filee biggest files'
+          Get-ChildItem release/filee -File | Sort-Object Length -Descending | Select-Object -First 30 | ForEach-Object { $o += ($_.Name + ' = ' + [math]::Round($_.Length/1MB,1) + ' MB') }
+          $o += '--- release/filee folders'
+          foreach ($d in (Get-ChildItem release/filee -Directory)) { $o += ($d.Name + ' = ' + (Sz $d.FullName) + ' MB') }
+          Write-Host ("::notice title=Sizes::" + (($o -join "`n") -replace "`r","" -replace "%","%25" -replace "`n","%0A"))
       - uses: actions/upload-artifact@v4
         with:
           name: LightIsland-release
