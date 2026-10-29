@@ -62,6 +62,7 @@ if ($Full) { $only += @('rhwp', 'pandoc', 'ghostscript') }
 if ($Full) { $only += @('libreoffice', 'h2orestart', 'jre', 'calibre', 'tesseract') }
 & (Join-Path $here 'filee\build\fetch-engines.ps1') -Destination (Join-Path $fil 'engines') -Only $only -RuntimeTo $fil
 
+if (-not $Full) { Remove-Item (Join-Path $fil 'engines\rhwp') -Recurse -Force -ErrorAction SilentlyContinue } # HWP only in the full pack
 # Trim what the command line converter never uses: ffplay, language folders, import libs
 Get-ChildItem $fil -Recurse -Include 'ffplay.exe' -File -ErrorAction SilentlyContinue | Remove-Item -Force
 foreach ($l in 'da','de','es','fr','nl','pt','pt-BR','zh-CN','zh-TW') { Remove-Item (Join-Path $fil $l) -Recurse -Force -ErrorAction SilentlyContinue }
