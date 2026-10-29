@@ -864,7 +864,6 @@ public partial class MainWindow : Window
 
     private void UpdateUi(string title, string artist, bool playing, byte[]? art)
     {
-        MusicFx.OnTrack(title, artist, playing, art);
         TitleText.Text = string.IsNullOrWhiteSpace(title) ? "Nothing playing" : title;
         ArtistText.Text = artist;
         SetPlayIcon(playing);

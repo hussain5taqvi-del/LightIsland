@@ -341,33 +341,6 @@
                     </Grid>
                     <Border Height="1" Background="{StaticResource Hairline}" Margin="16,0,0,0" />
                     <Grid Margin="14,9">
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="Music edge glow" Foreground="White" />
-                            <TextBlock Text="A soft light around the screen edges in the colors of the song. Moves with the music." Foreground="#99EBEBF5" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap" MaxWidth="300" />
-                        </StackPanel>
-                        <CheckBox x:Name="FxEdgeCheck" Style="{StaticResource Switch}" HorizontalAlignment="Right"
-                                  Checked="Fx_Changed" Unchecked="Fx_Changed" />
-                    </Grid>
-                    <Border Height="1" Background="{StaticResource Hairline}" Margin="16,0,0,0" />
-                    <Grid Margin="14,9">
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="Music wallpaper" Foreground="White" />
-                            <TextBlock Text="Your desktop becomes the song: album colors, cover and live lyrics. Needs the live video wallpaper to be off. RAM limit becomes 100 MB while it runs." Foreground="#99EBEBF5" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap" MaxWidth="300" />
-                        </StackPanel>
-                        <CheckBox x:Name="FxWallCheck" Style="{StaticResource Switch}" HorizontalAlignment="Right"
-                                  Checked="Fx_Changed" Unchecked="Fx_Changed" />
-                    </Grid>
-                    <Border Height="1" Background="{StaticResource Hairline}" Margin="16,0,0,0" />
-                    <Grid Margin="14,9">
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="Lyrics on the wallpaper" Foreground="White" />
-                            <TextBlock Text="Synced lyrics from LRCLIB (online). Nothing is shown when a song has none." Foreground="#99EBEBF5" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap" MaxWidth="300" />
-                        </StackPanel>
-                        <CheckBox x:Name="FxLyricsCheck" Style="{StaticResource Switch}" HorizontalAlignment="Right"
-                                  Checked="Fx_Changed" Unchecked="Fx_Changed" />
-                    </Grid>
-                    <Border Height="1" Background="{StaticResource Hairline}" Margin="16,0,0,0" />
-                    <Grid Margin="14,9">
                         <TextBlock Text="Start with Windows" Foreground="White" VerticalAlignment="Center" />
                         <CheckBox x:Name="StartupCheck" Style="{StaticResource Switch}" HorizontalAlignment="Right"
                                   Checked="Startup_Changed" Unchecked="Startup_Changed" />

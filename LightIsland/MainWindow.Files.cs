@@ -63,7 +63,6 @@ public partial class MainWindow
 
     private void DisposeTasks()
     {
-        MusicFx.Shutdown();
         _guardTimer?.Stop();
         _sweepTimer?.Stop();
         _sel?.Dispose();
@@ -77,7 +76,6 @@ public partial class MainWindow
     public void ApplyTaskSettings()
     {
         PerfLog.Enabled = _s.PerfLog;
-        MusicFx.Configure(_s.MusicFx, _s.MusicFxLyrics, () => _media.GetProgress(_playing));
         if (_sel != null) { _sel.TriggerVk = _s.RingKey; _sel.AppsVk = _s.AppsKey; _sel.AppsEnabled = _s.AppsRing; }
         _sel?.SetEnabled(_s.FileWheel);
         _clipSvc?.SetEnabled(_s.LinkDetect || _s.ClipHistory);

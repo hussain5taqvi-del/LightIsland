@@ -87,10 +87,10 @@ internal sealed class SelectionService : IDisposable
     public volatile bool AppsEnabled = true;
     public event Action? AppsDown, AppsUp, AppsCancel;
     public bool AppsHeld => _appsHeld;
-    private volatile bool _appsHeld, _appsCancel;
+    private volatile bool _appsHeld, _appsCancel, _appsFired;
     private long _appsTick, _appsId;
 
-    private volatile bool _held, _cancel;
+    private volatile bool _held, _cancel, _fired;
     private long _holdId, _lastTick;
 
     private static bool IsModifier(int vk) => vk is 0x10 or 0x11 or 0x12 or 0xA0 or 0xA1 or 0xA2 or 0xA3 or 0xA4 or 0xA5 or 0x5B or 0x5C;
@@ -144,9 +144,10 @@ internal sealed class SelectionService : IDisposable
                                     _appsCancel = false;
                                     _appsTick = now;
                                     long aid = Interlocked.Increment(ref _appsId);
+                                    _appsFired = false;
                                     Task.Delay(HoldMs).ContinueWith(_ =>
                                     {
-                                        if (_appsHeld && !_appsCancel && Interlocked.Read(ref _appsId) == aid) _ui.BeginInvoke(new Action(() => AppsDown?.Invoke()));
+                                        if (_appsHeld && !_appsCancel && Interlocked.Read(ref _appsId) == aid) { _appsFired = true; _ui.BeginInvoke(new Action(() => AppsDown?.Invoke())); }
                                     });
                                     if (!amod) return (IntPtr)1;
                                 }
@@ -155,7 +156,11 @@ internal sealed class SelectionService : IDisposable
                             {
                                 _appsHeld = false;
                                 _ui.BeginInvoke(new Action(() => AppsUp?.Invoke()));
-                                if (!amod) return (IntPtr)1;
+                                if (!amod)
+                                {
+                                    if (!_appsFired) Tap(av); // a quick tap is still an ordinary key press (Caps Lock toggles ...)
+                                    return (IntPtr)1;
+                                }
                             }
                         }
                         else if (down && _appsHeld && amod)
@@ -182,10 +187,11 @@ internal sealed class SelectionService : IDisposable
                                 _held = true;
                                 _cancel = false;
                                 _lastTick = now;
+                                _fired = false;
                                 long id = Interlocked.Increment(ref _holdId);
                                 Task.Delay(HoldMs).ContinueWith(_ =>
                                 {
-                                    if (_held && !_cancel && Interlocked.Read(ref _holdId) == id) _ui.BeginInvoke(new Action(OnHold));
+                                    if (_held && !_cancel && Interlocked.Read(ref _holdId) == id) { _fired = true; _ui.BeginInvoke(new Action(OnHold)); }
                                 });
                                 if (!mod) return (IntPtr)1;
                             }
@@ -194,7 +200,11 @@ internal sealed class SelectionService : IDisposable
                         {
                             _held = false;
                             _ui.BeginInvoke(new Action(() => KeyReleased?.Invoke()));
-                            if (!mod) return (IntPtr)1;
+                            if (!mod)
+                            {
+                                if (!_fired && !_cancel) Tap(trig); // quick tap: the key still does its normal job
+                                return (IntPtr)1;
+                            }
                         }
                     }
                     else if (down && _held)
@@ -209,6 +219,22 @@ internal sealed class SelectionService : IDisposable
             // a hook must never throw
         }
         return CallNextHookEx(_hook, code, wParam, lParam);
+    }
+
+    [DllImport("user32.dll")] private static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
+
+    // The ring keys are swallowed while held; when it was only a tap the key press is sent again (the hook ignores injected keys)
+    private static void Tap(int vk)
+    {
+        Task.Run(() =>
+        {
+            try
+            {
+                keybd_event((byte)vk, 0, 0, UIntPtr.Zero);
+                keybd_event((byte)vk, 0, 2, UIntPtr.Zero);
+            }
+            catch { }
+        });
     }
 
     private static bool InShellWindow()

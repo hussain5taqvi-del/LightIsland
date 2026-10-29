@@ -41,9 +41,6 @@ public partial class SettingsWindow : Window
         ShowKeyNames();
         AppsCheck.IsChecked = _s.AppsRing;
         PerfCheck.IsChecked = _s.PerfLog;
-        FxEdgeCheck.IsChecked = _s.MusicFx == "Edge";
-        FxWallCheck.IsChecked = _s.MusicFx == "Wallpaper";
-        FxLyricsCheck.IsChecked = _s.MusicFxLyrics;
         _ready = true;
     }
 
@@ -473,20 +470,6 @@ public partial class SettingsWindow : Window
     {
         if (!_ready) return;
         _s.AppsRing = AppsCheck.IsChecked == true;
-        _s.Save();
-        _main.ApplyTaskSettings();
-    }
-
-    private void Fx_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!_ready) return;
-        // edge glow and wallpaper exclude each other
-        _ready = false;
-        if (ReferenceEquals(sender, FxEdgeCheck) && FxEdgeCheck.IsChecked == true) FxWallCheck.IsChecked = false;
-        if (ReferenceEquals(sender, FxWallCheck) && FxWallCheck.IsChecked == true) FxEdgeCheck.IsChecked = false;
-        _ready = true;
-        _s.MusicFx = FxWallCheck.IsChecked == true ? "Wallpaper" : FxEdgeCheck.IsChecked == true ? "Edge" : "Off";
-        _s.MusicFxLyrics = FxLyricsCheck.IsChecked == true;
         _s.Save();
         _main.ApplyTaskSettings();
     }

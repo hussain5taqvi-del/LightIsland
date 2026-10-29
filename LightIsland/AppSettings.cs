@@ -74,8 +74,6 @@ public sealed class AppSettings
     public List<AutoDeleteItem> AutoDelete { get; set; } = new();
     public int AppsKey { get; set; } = 0x14;           // hold to open the ring of favorite apps (virtual-key code, default Caps Lock)
     public bool AppsRing { get; set; } = true;
-    public string MusicFx { get; set; } = "Off";        // Off, Edge (glow around the screen) or Wallpaper (reacts to the music, with lyrics)
-    public bool MusicFxLyrics { get; set; } = true;
     public bool PerfLog { get; set; }                  // writes perf.log with the timing of every animation (off by default)
     public int RingKey { get; set; } = 0x58;           // hold this key on a selected file: the ring is open until it is let go (virtual-key code, default X)
     public Dictionary<string, List<string>> RingPins { get; set; } = new();   // formats pinned to the front of the ring, per file type

@@ -10,7 +10,7 @@
     <RootNamespace>LightIsland</RootNamespace>
     <StartupObject>LightIsland.Program</StartupObject>
     <AssemblyName>LightIsland</AssemblyName>
-    <Version>1.6.0</Version>
+    <Version>1.6.1</Version>
     <ApplicationIcon>app.ico</ApplicationIcon>
 
     <!-- Low-memory settings -->

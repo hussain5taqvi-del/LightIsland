@@ -306,24 +306,6 @@ internal static class DesktopHost
         }
     }
 
-    /// <summary>True when a real full-screen window (a game, a video; no title bar, covers the screen) is in front.</summary>
-    public static bool IsFullscreenApp(IntPtr self)
-    {
-        try
-        {
-            IntPtr fg = GetForegroundWindow();
-            if (fg == IntPtr.Zero || fg == self || !IsWindowVisible(fg) || IsIconic(fg)) return false;
-            var sb = new StringBuilder(64);
-            GetClassName(fg, sb, sb.Capacity);
-            string cls = sb.ToString();
-            if (cls == "Progman" || cls == "WorkerW" || cls == "Shell_TrayWnd" || cls == "Shell_SecondaryTrayWnd") return false;
-            if ((GetWindowLong(fg, -16) & 0x00C00000) != 0) return false; // has a title bar: an ordinary window
-            if (!GetWindowRect(fg, out RECT r)) return false;
-            return r.Left <= 0 && r.Top <= 0 && r.Right >= GetSystemMetrics(0) && r.Bottom >= GetSystemMetrics(1);
-        }
-        catch { return false; }
-    }
-
     /// <summary>Makes Windows repaint the normal wallpaper (after the live one is closed).</summary>
     public static void RefreshWallpaper()
     {

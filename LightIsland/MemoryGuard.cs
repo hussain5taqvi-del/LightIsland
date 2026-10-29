@@ -14,24 +14,12 @@ internal static class MemoryGuard
 {
     public static int LimitMb { get; private set; } = 30;
 
-    /// <summary>A running feature (music wallpaper) lifts the cap to this many MB; 0 = none.</summary>
-    public static int FeatureCapMb { get; private set; }
-    private static int EffectiveMb => Math.Max(LimitMb, FeatureCapMb);
-
-    public static void SetFeatureCap(int mb)
-    {
-        bool down = mb < FeatureCapMb;
-        FeatureCapMb = mb;
-        Apply(LimitMb);
-        if (down) Trim();
-    }
-
     public static void Apply(int limitMb)
     {
         LimitMb = Math.Clamp(limitMb, 20, 400);
         try
         {
-            ulong max = (ulong)EffectiveMb * 1024UL * 1024UL;
+            ulong max = (ulong)LimitMb * 1024UL * 1024UL;
             // 0x2 = QUOTA_LIMITS_HARDWS_MIN_DISABLE, 0x4 = QUOTA_LIMITS_HARDWS_MAX_ENABLE (hard maximum)
             SetProcessWorkingSetSizeEx(GetCurrentProcess(), new UIntPtr(256UL * 1024UL), new UIntPtr(max), 0x2 | 0x4);
         }
@@ -49,8 +37,8 @@ internal static class MemoryGuard
     {
         try
         {
-            if (EffectiveMb >= 96) return;
-            ulong max = (ulong)(EffectiveMb + 40) * 1024UL * 1024UL;
+            if (LimitMb >= 96) return;
+            ulong max = (ulong)(LimitMb + 40) * 1024UL * 1024UL;
             SetProcessWorkingSetSizeEx(GetCurrentProcess(), new UIntPtr(256UL * 1024UL), new UIntPtr(max), 0x2 | 0x4);
         }
         catch { }
