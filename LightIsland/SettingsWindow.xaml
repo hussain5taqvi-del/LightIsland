@@ -301,7 +301,6 @@
                     <Grid Margin="14,9">
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="File ring key" Foreground="White" />
-                            <TextBlock Text="Select a file, hold this key: the ring opens. Let go: it closes." Foreground="#99EBEBF5" FontSize="11" Margin="0,2,0,0" />
                         </StackPanel>
                         <Border x:Name="RingKeyBtn" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="64" CornerRadius="9"
                                 Padding="12,5" Background="#2C2C2E" Cursor="Hand" ToolTip="Click, then press the key you want"
@@ -312,32 +311,13 @@
                     <Border Height="1" Background="{StaticResource Hairline}" Margin="16,0,0,0" />
                     <Grid Margin="14,9">
                         <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="Favorite apps ring" Foreground="White" />
-                            <TextBlock Text="Hold the apps key: a ring of your apps opens. Let go on an app to open it." Foreground="#99EBEBF5" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap" MaxWidth="300" />
-                        </StackPanel>
-                        <CheckBox x:Name="AppsCheck" Style="{StaticResource Switch}" HorizontalAlignment="Right"
-                                  Checked="Apps_Changed" Unchecked="Apps_Changed" />
-                    </Grid>
-                    <Border Height="1" Background="{StaticResource Hairline}" Margin="16,0,0,0" />
-                    <Grid Margin="14,9">
-                        <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="Apps key" Foreground="White" />
-                            <TextBlock Text="Caps Lock, Ctrl, Alt or an F-key work best (a letter key stops typing that letter)." Foreground="#99EBEBF5" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap" MaxWidth="300" />
                         </StackPanel>
                         <Border x:Name="AppsKeyBtn" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="64" CornerRadius="9"
                                 Padding="12,5" Background="#2C2C2E" Cursor="Hand" ToolTip="Click, then press the key you want"
                                 MouseLeftButtonUp="AppsKey_Click">
                             <TextBlock x:Name="AppsKeyText" Foreground="White" FontWeight="SemiBold" HorizontalAlignment="Center" />
                         </Border>
-                    </Grid>
-                    <Border Height="1" Background="{StaticResource Hairline}" Margin="16,0,0,0" />
-                    <Grid Margin="14,9">
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="Record animation timing" Foreground="White" />
-                            <TextBlock Text="For fixing lag: writes %AppData%\LightIsland\perf.log" Foreground="#99EBEBF5" FontSize="11" Margin="0,2,0,0" />
-                        </StackPanel>
-                        <CheckBox x:Name="PerfCheck" Style="{StaticResource Switch}" HorizontalAlignment="Right"
-                                  Checked="Perf_Changed" Unchecked="Perf_Changed" />
                     </Grid>
                     <Border Height="1" Background="{StaticResource Hairline}" Margin="16,0,0,0" />
                     <Grid Margin="14,9">
@@ -354,7 +334,6 @@
                     <Grid Margin="14,9">
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="Automatic updates" Foreground="White" />
-                            <TextBlock Text="New versions are downloaded from GitHub by themselves (only the app, about 85 MB, not the whole package)." Foreground="#99EBEBF5" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap" MaxWidth="300" />
                         </StackPanel>
                         <CheckBox x:Name="AutoUpdateCheck" Style="{StaticResource Switch}" HorizontalAlignment="Right"
                                   Checked="AutoUpdate_Changed" Unchecked="AutoUpdate_Changed" />
@@ -371,7 +350,7 @@
                     Click="Reset_Click" />
 
             <StackPanel Margin="0,24,0,4">
-                <TextBlock Text="LightIsland v1.2" HorizontalAlignment="Center" Foreground="#99EBEBF5" FontSize="12" />
+                <TextBlock x:Name="VersionText" Text="LightIsland" HorizontalAlignment="Center" Foreground="#99EBEBF5" FontSize="12" />
                 <TextBlock Text="Made by NOBODY" HorizontalAlignment="Center" Foreground="#636366"
                            FontSize="11" Margin="0,2,0,0" />
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">

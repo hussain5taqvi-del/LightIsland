@@ -183,6 +183,8 @@ public sealed class AppSettings
         AutoDelete ??= new List<AutoDeleteItem>();
         RingPins ??= new Dictionary<string, List<string>>();
         RamLimitMb = Math.Clamp(RamLimitMb, 20, 400);
+        AppsRing = true; // always on (no switch in Settings)
+        PerfLog = false;
         if (AppsKey < 8 || AppsKey > 254 || AppsKey == 0x1B || AppsKey == 0x0D || AppsKey == 0x09) AppsKey = 0x14;
         if (RingKey < 8 || RingKey > 254 || RingKey == 0x1B || RingKey == 0x0D || RingKey == 0x09) RingKey = 0x58;
         // These have no switch any more: always on / unlimited

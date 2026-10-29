@@ -39,8 +39,7 @@ public partial class SettingsWindow : Window
         Hour24Check.IsChecked = _s.Use24Hour;
         StartupCheck.IsChecked = StartupManager.IsEnabled;
         ShowKeyNames();
-        AppsCheck.IsChecked = _s.AppsRing;
-        PerfCheck.IsChecked = _s.PerfLog;
+        VersionText.Text = "LightIsland v" + Updater.Current;
         AutoUpdateCheck.IsChecked = _s.AutoUpdate;
         RefreshUpdateUi();
         _main.UpdateStatusChanged += OnUpdateStatus;
@@ -470,14 +469,6 @@ public partial class SettingsWindow : Window
         if (_captureTarget != 0) { _captureTarget = 0; ShowKeyNames(); }
     }
 
-    private void Apps_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!_ready) return;
-        _s.AppsRing = AppsCheck.IsChecked == true;
-        _s.Save();
-        _main.ApplyTaskSettings();
-    }
-
     private void OnUpdateStatus() => Dispatcher.BeginInvoke(new Action(RefreshUpdateUi));
 
     private void RefreshUpdateUi()
@@ -498,14 +489,6 @@ public partial class SettingsWindow : Window
         if (!_ready) return;
         _s.AutoUpdate = AutoUpdateCheck.IsChecked == true;
         _s.Save();
-    }
-
-    private void Perf_Changed(object sender, RoutedEventArgs e)
-    {
-        if (!_ready) return;
-        _s.PerfLog = PerfCheck.IsChecked == true;
-        _s.Save();
-        _main.ApplyTaskSettings();
     }
 
     private void Startup_Changed(object sender, RoutedEventArgs e)
