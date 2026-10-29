@@ -1,0 +1,84 @@
+name: release
+
+# Push a tag such as v1.7.0 (or run this by hand): builds the installer, the portable zip and the small
+# auto-update package, and publishes them as a GitHub Release. The app checks this release for updates.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, for example v1.7.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: LightIsland
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Version
+        id: v
+        shell: pwsh
+        run: |
+          $tag = if ("${{ github.event_name }}" -eq "workflow_dispatch") { "${{ inputs.tag }}" } else { "${{ github.ref_name }}" }
+          $ver = $tag.TrimStart('v','V')
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "ver=$ver" >> $env:GITHUB_OUTPUT
+
+      - name: Publish
+        run: dotnet publish LightIsland.csproj -c Release -r win-x64 --self-contained true -p:Version=${{ steps.v.outputs.ver }} -p:PublishReadyToRun=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -o release
+
+      - name: Engines (yt-dlp, deno, Filee)
+        shell: pwsh
+        run: ./tools/get-engines.ps1 -Release "$PWD/release"
+
+      - name: Packages
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.v.outputs.ver }}"
+          New-Item -ItemType Directory -Force out | Out-Null
+          # 1) update package: only the app itself (a few tens of MB), this is what the auto-update downloads
+          Compress-Archive -Path release/LightIsland.exe -DestinationPath out/LightIsland-update.zip -CompressionLevel Optimal
+          $h = (Get-FileHash out/LightIsland-update.zip -Algorithm SHA256).Hash
+          "$h  LightIsland-update.zip" | Out-File -Encoding ascii out/LightIsland-update.zip.sha256
+          # 2) portable: the whole folder, runs from anywhere (USB stick too)
+          7z a -tzip -mx=5 "out/LightIsland-Portable-$ver.zip" "./release/*" | Out-Null
+          # 3) installer
+          choco install innosetup -y --no-progress | Out-Null
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          & $iscc "/DAppVersion=$ver" "/DSourceDir=$PWD\release" installer\LightIsland.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
+          Move-Item installer/out/LightIsland-Setup-$ver.exe out/
+          Get-ChildItem out | ForEach-Object { Write-Host ($_.Name + " = " + [math]::Round($_.Length/1MB,1) + " MB") }
+
+      - name: Installer test (silent install, files present)
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.v.outputs.ver }}"
+          $dir = "$env:RUNNER_TEMP\li-test"
+          Start-Process "out/LightIsland-Setup-$ver.exe" -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR=`"$dir`" /TASKS=`"`"" -Wait
+          foreach ($f in 'LightIsland.exe','engines\yt-dlp.exe','filee\filee-cli.exe') {
+            if (-not (Test-Path "$dir\$f")) { throw "missing after install: $f" }
+          }
+          Write-Host "installer ok"
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ steps.v.outputs.tag }}"
+          $ver = "${{ steps.v.outputs.ver }}"
+          $notes = "Installer: LightIsland-Setup-$ver.exe (no admin rights needed).`nPortable: LightIsland-Portable-$ver.zip (unzip anywhere and run LightIsland.exe).`nInstalled copies update themselves from LightIsland-update.zip."
+          gh release create $tag --repo "${{ github.repository }}" --title "LightIsland $ver" --notes $notes `
+            "out/LightIsland-Setup-$ver.exe" "out/LightIsland-Portable-$ver.zip" "out/LightIsland-update.zip" "out/LightIsland-update.zip.sha256"

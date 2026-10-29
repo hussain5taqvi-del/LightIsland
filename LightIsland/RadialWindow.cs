@@ -47,14 +47,18 @@ internal sealed class RadialWindow : Window
     private readonly bool _releasePicks;
     private readonly string _idleText;
     private readonly Func<ActionDef, string?>? _remove;
+    private readonly Func<bool>? _stillHeld;
+    private readonly DispatcherTimer _heldWatch = new() { Interval = TimeSpan.FromMilliseconds(120) };
     private int _hovered = -1;
     private int _page;
     private bool _closing, _busy, _flipping;
 
     public RadialWindow(List<List<ActionDef>> pages, string title, ImageSource? fileIcon, bool light, Color accent,
         Func<ActionDef, RingResult?> pick, Func<ActionDef, bool>? togglePin, Func<ActionDef, bool>? isPinned,
-        bool releasePicks = false, string idleText = "Let go to close", Func<ActionDef, string?>? remove = null)
+        bool releasePicks = false, string idleText = "Let go to close", Func<ActionDef, string?>? remove = null,
+        bool glass = false, double glassOpacity = 60, Func<bool>? stillHeld = null)
     {
+        _stillHeld = stillHeld;
         _releasePicks = releasePicks;
         _idleText = idleText;
         _remove = remove;
@@ -67,11 +71,21 @@ internal sealed class RadialWindow : Window
         double lum = (0.299 * accent.R + 0.587 * accent.G + 0.114 * accent.B) / 255.0;
         _onAccent = lum > 0.62 ? Color.FromRgb(0x10, 0x10, 0x12) : Colors.White;
 
-        _fillC = light ? Color.FromRgb(0xF7, 0xF5, 0xF3) : Color.FromRgb(0x1B, 0x1B, 0x1F);
-        _gapC = light ? Color.FromRgb(0xDD, 0xD9, 0xD5) : Color.FromRgb(0x0A, 0x0A, 0x0C);
+        // Liquid Glass: see-through slices with a light rim. The alpha never goes low enough to hurt the text.
+        double ga = Math.Clamp(0.5 + glassOpacity / 100.0 * 0.4, 0.58, 0.9);
+        byte fa = (byte)(255 * ga * 0.8);
+        _fillC = glass
+            ? (light ? Color.FromArgb(fa, 0xFF, 0xFF, 0xFF) : Color.FromArgb(fa, 0x34, 0x37, 0x44))
+            : (light ? Color.FromRgb(0xF7, 0xF5, 0xF3) : Color.FromRgb(0x1B, 0x1B, 0x1F));
+        _gapC = glass
+            ? (light ? Color.FromArgb(0x90, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x38, 0xFF, 0xFF, 0xFF))
+            : (light ? Color.FromRgb(0xDD, 0xD9, 0xD5) : Color.FromRgb(0x0A, 0x0A, 0x0C));
+        Color baseC = glass
+            ? (light ? Color.FromArgb((byte)(255 * ga * 0.75), 0xFF, 0xFF, 0xFF) : Color.FromArgb((byte)(255 * ga * 0.8), 0x0A, 0x0B, 0x10))
+            : _gapC;
         _textC = light ? Color.FromRgb(0x1C, 0x1C, 0x1E) : Colors.White;
         _text = Frozen(_textC);
-        _muted = Frozen(Color.FromRgb(0x8E, 0x8E, 0x93));
+        _muted = Frozen(glass ? (light ? Color.FromRgb(0x55, 0x55, 0x5C) : Color.FromRgb(0xC4, 0xC4, 0xCC)) : Color.FromRgb(0x8E, 0x8E, 0x93));
 
         WindowStyle = WindowStyle.None;
         AllowsTransparency = true;
@@ -97,7 +111,7 @@ internal sealed class RadialWindow : Window
         {
             Width = 2 * Outer,
             Height = 2 * Outer,
-            Fill = Frozen(_gapC),
+            Fill = Frozen(baseC),
             IsHitTestVisible = false,
             Effect = new DropShadowEffect { BlurRadius = 28, ShadowDepth = 4, Opacity = light ? 0.28 : 0.55, Color = Colors.Black },
             CacheMode = new BitmapCache(1.5)
@@ -118,8 +132,8 @@ internal sealed class RadialWindow : Window
         {
             Width = 2 * hr,
             Height = 2 * hr,
-            Fill = Frozen(light ? Colors.White : Color.FromRgb(0x0B, 0x0B, 0x0D)),
-            Stroke = Frozen(light ? Color.FromRgb(0xDD, 0xD9, 0xD5) : Color.FromRgb(0x2A, 0x2A, 0x30)),
+            Fill = Frozen(glass ? (light ? Color.FromArgb(0xC8, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0xB4, 0x0B, 0x0C, 0x10)) : (light ? Colors.White : Color.FromRgb(0x0B, 0x0B, 0x0D))),
+            Stroke = Frozen(glass ? Color.FromArgb(0x60, 0xFF, 0xFF, 0xFF) : (light ? Color.FromRgb(0xDD, 0xD9, 0xD5) : Color.FromRgb(0x2A, 0x2A, 0x30))),
             StrokeThickness = 2,
             Cursor = pages.Count > 1 ? Cursors.Hand : Cursors.Arrow,
             HorizontalAlignment = HorizontalAlignment.Center,
@@ -169,7 +183,23 @@ internal sealed class RadialWindow : Window
         };
 
         Loaded += (_, _) => GlassWindow.ForceForeground(this);
-        Deactivated += (_, _) => { if (!_busy) CloseOnce(); };
+        // A ring opened by holding a key belongs to that key: it closes when the key is no longer held (this is also the
+        // way out when Windows never gave the ring focus, e.g. over Chrome). Other rings close when they lose focus.
+        if (_stillHeld != null)
+        {
+            _heldWatch.Tick += (_, _) =>
+            {
+                if (_busy || _closing) return;
+                bool held = false;
+                try { held = _stillHeld(); } catch { }
+                if (!held) ReleaseClose();
+            };
+            _heldWatch.Start();
+        }
+        else
+        {
+            Deactivated += (_, _) => { if (!_busy) CloseOnce(); };
+        }
         PreviewKeyDown += OnKey;
         PreviewMouseWheel += (_, e) => { e.Handled = true; Flip(e.Delta < 0 ? 1 : -1); };
 
@@ -506,6 +536,7 @@ internal sealed class RadialWindow : Window
         if (_closing) return;
         _closing = true;
         _safety.Stop();
+        _heldWatch.Stop();
         _sayTimer?.Stop();
         try { Close(); } catch { }
     }

@@ -49,7 +49,7 @@ public partial class MainWindow
         for (int i = 0; i < apps.Count; i += RingPlan.PerPage) pages.Add(apps.Skip(i).Take(RingPlan.PerPage).ToList());
 
         var w = new RadialWindow(pages, "Apps", null, _s.Theme == "Light", AccentValue(),
-            RunAppAction, null, null, true, "Let go on an app", RemoveApp);
+            RunAppAction, null, null, true, "Let go on an app", RemoveApp, _s.Glass, _s.GlassOpacity, () => _sel != null && _sel.AppsHeld);
         _appsWheel = w;
         w.Closed += (_, _) =>
         {

@@ -41,6 +41,10 @@ public partial class SettingsWindow : Window
         ShowKeyNames();
         AppsCheck.IsChecked = _s.AppsRing;
         PerfCheck.IsChecked = _s.PerfLog;
+        AutoUpdateCheck.IsChecked = _s.AutoUpdate;
+        RefreshUpdateUi();
+        _main.UpdateStatusChanged += OnUpdateStatus;
+        Closed += (_, _) => _main.UpdateStatusChanged -= OnUpdateStatus;
         _ready = true;
     }
 
@@ -472,6 +476,28 @@ public partial class SettingsWindow : Window
         _s.AppsRing = AppsCheck.IsChecked == true;
         _s.Save();
         _main.ApplyTaskSettings();
+    }
+
+    private void OnUpdateStatus() => Dispatcher.BeginInvoke(new Action(RefreshUpdateUi));
+
+    private void RefreshUpdateUi()
+    {
+        UpdateText.Text = string.IsNullOrEmpty(_main.UpdateStatus) ? "Version " + Updater.Current : _main.UpdateStatus;
+        UpdateBtnText.Text = _main.UpdateReady ? "Restart now" : "Check now";
+    }
+
+    private async void Update_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (_main.UpdateReady) { Updater.Restart(); return; }
+        await _main.CheckUpdateAsync(true);
+        RefreshUpdateUi();
+    }
+
+    private void AutoUpdate_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_ready) return;
+        _s.AutoUpdate = AutoUpdateCheck.IsChecked == true;
+        _s.Save();
     }
 
     private void Perf_Changed(object sender, RoutedEventArgs e)

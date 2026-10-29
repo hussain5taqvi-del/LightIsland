@@ -364,6 +364,12 @@
 
                             <!-- Controls: previous | play / pause | next -->
                             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center">
+                                <Button x:Name="ShuffleBtn" Style="{StaticResource MediaBtn}" Width="34" Height="34" Opacity="0.3" Click="Shuffle_Click" ToolTip="Shuffle">
+                                    <Viewbox Width="19" Height="19">
+                                        <Path x:Name="ShuffleIcon" Width="24" Height="24" Stretch="None" Fill="{DynamicResource TextBrush}"
+                                              Data="M10.59,9.17 L5.41,4 L4,5.41 L9.17,10.58 Z M14.5,4 L16.54,6.04 L4,18.59 L5.41,20 L17.96,7.46 L20,9.5 L20,4 Z M14.83,13.41 L13.42,14.82 L16.55,17.95 L14.5,20 L20,20 L20,14.5 L17.96,16.54 Z" />
+                                    </Viewbox>
+                                </Button>
                                 <Button Style="{StaticResource MediaBtn}" Click="Prev_Click" ToolTip="Previous">
                                     <Viewbox Width="26" Height="26">
                                         <Path Width="24" Height="24" Stretch="None" Data="{StaticResource PrevGeo}"
@@ -384,6 +390,16 @@
                                         <Path Width="24" Height="24" Stretch="None" Data="{StaticResource NextGeo}"
                                               Fill="{DynamicResource TextBrush}" Stroke="{DynamicResource TextBrush}"
                                               StrokeThickness="1.6" StrokeLineJoin="Round" />
+                                    </Viewbox>
+                                </Button>
+                                <Button x:Name="RepeatBtn" Style="{StaticResource MediaBtn}" Width="34" Height="34" Opacity="0.3" Click="Repeat_Click" ToolTip="Repeat">
+                                    <Viewbox Width="19" Height="19">
+                                        <Grid Width="24" Height="24">
+                                            <Path x:Name="RepeatIcon" Fill="{DynamicResource TextBrush}"
+                                                  Data="M7,7 L17,7 L17,10 L21,6 L17,2 L17,5 L5,5 L5,11 L7,11 Z M17,17 L7,17 L7,14 L3,18 L7,22 L7,19 L19,19 L19,13 L17,13 Z" />
+                                            <Path x:Name="RepeatOne" Fill="{DynamicResource TextBrush}" Visibility="Collapsed"
+                                                  Data="M13,15 L13,9 L12,9 L10,10 L10,11 L11.5,11 L11.5,15 Z" />
+                                        </Grid>
                                     </Viewbox>
                                 </Button>
                             </StackPanel>

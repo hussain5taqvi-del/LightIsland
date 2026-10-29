@@ -341,6 +341,26 @@
                     </Grid>
                     <Border Height="1" Background="{StaticResource Hairline}" Margin="16,0,0,0" />
                     <Grid Margin="14,9">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Updates" Foreground="White" />
+                            <TextBlock x:Name="UpdateText" Foreground="#99EBEBF5" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap" MaxWidth="260" />
+                        </StackPanel>
+                        <Border x:Name="UpdateBtn" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="64" CornerRadius="9"
+                                Padding="12,5" Background="#2C2C2E" Cursor="Hand" MouseLeftButtonUp="Update_Click">
+                            <TextBlock x:Name="UpdateBtnText" Text="Check now" Foreground="White" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                        </Border>
+                    </Grid>
+                    <Border Height="1" Background="{StaticResource Hairline}" Margin="16,0,0,0" />
+                    <Grid Margin="14,9">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Automatic updates" Foreground="White" />
+                            <TextBlock Text="New versions are downloaded from GitHub by themselves (a few MB, not the whole app)." Foreground="#99EBEBF5" FontSize="11" Margin="0,2,0,0" TextWrapping="Wrap" MaxWidth="300" />
+                        </StackPanel>
+                        <CheckBox x:Name="AutoUpdateCheck" Style="{StaticResource Switch}" HorizontalAlignment="Right"
+                                  Checked="AutoUpdate_Changed" Unchecked="AutoUpdate_Changed" />
+                    </Grid>
+                    <Border Height="1" Background="{StaticResource Hairline}" Margin="16,0,0,0" />
+                    <Grid Margin="14,9">
                         <TextBlock Text="Start with Windows" Foreground="White" VerticalAlignment="Center" />
                         <CheckBox x:Name="StartupCheck" Style="{StaticResource Switch}" HorizontalAlignment="Right"
                                   Checked="Startup_Changed" Unchecked="Startup_Changed" />

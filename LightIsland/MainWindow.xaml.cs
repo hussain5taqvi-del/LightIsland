@@ -84,6 +84,8 @@ public partial class MainWindow : Window
         _media.Changed += (title, artist, playing, art) =>
             Dispatcher.InvokeAsync(() => UpdateUi(title, artist, playing, art));
 
+        _media.ModesChanged += () => Dispatcher.InvokeAsync(UpdateModes);
+
         _media.TimelineChanged += () =>
             Dispatcher.InvokeAsync(() =>
             {
@@ -928,6 +930,41 @@ public partial class MainWindow : Window
     private async void PlayPause_Click(object sender, RoutedEventArgs e)
     {
         await _media.TogglePlayPauseAsync();
+    }
+
+    private async void Shuffle_Click(object sender, RoutedEventArgs e)
+    {
+        Pop(sender);
+        await _media.ShuffleAsync();
+    }
+
+    private async void Repeat_Click(object sender, RoutedEventArgs e)
+    {
+        Pop(sender);
+        await _media.RepeatAsync();
+    }
+
+    // Shuffle / repeat buttons show the real state of the player; a dim one means the player does not offer it
+    private void UpdateModes()
+    {
+        try
+        {
+            Brush on = new SolidColorBrush(AccentValue());
+            ShuffleBtn.IsEnabled = _media.ShuffleSupported;
+            ShuffleBtn.Opacity = !_media.ShuffleSupported ? 0.18 : _media.ShuffleOn ? 1.0 : 0.5;
+            ShuffleIcon.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "TextBrush");
+            if (_media.ShuffleOn) ShuffleIcon.Fill = on;
+
+            RepeatBtn.IsEnabled = _media.RepeatSupported;
+            RepeatBtn.Opacity = !_media.RepeatSupported ? 0.18 : _media.RepeatMode != 0 ? 1.0 : 0.5;
+            RepeatIcon.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "TextBrush");
+            RepeatOne.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "TextBrush");
+            if (_media.RepeatMode != 0) { RepeatIcon.Fill = on; RepeatOne.Fill = on; }
+            RepeatOne.Visibility = _media.RepeatMode == 1 ? Visibility.Visible : Visibility.Collapsed;
+            ShuffleBtn.ToolTip = _media.ShuffleSupported ? (_media.ShuffleOn ? "Shuffle: on" : "Shuffle: off") : "This player has no shuffle";
+            RepeatBtn.ToolTip = !_media.RepeatSupported ? "This player has no repeat" : _media.RepeatMode == 0 ? "Repeat: off" : _media.RepeatMode == 1 ? "Repeat: this song" : "Repeat: all";
+        }
+        catch { }
     }
 
     private async void Next_Click(object sender, RoutedEventArgs e)

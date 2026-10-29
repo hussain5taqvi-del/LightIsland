@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Windows.Media;
 using Windows.Media.Control;
 using Windows.Storage.Streams;
 
@@ -21,6 +22,18 @@ public sealed class MediaService
 
     /// <summary>title, artist, isPlaying, albumArt (same array reference for the same song)</summary>
     public event Action<string, string, bool, byte[]?>? Changed;
+
+    /// <summary>Shuffle / repeat state of the player changed (or the player does not offer them).</summary>
+    public event Action? ModesChanged;
+    public bool ShuffleSupported { get; private set; }
+    public bool ShuffleOn { get; private set; }
+    public bool RepeatSupported { get; private set; }
+    /// <summary>0 = off, 1 = repeat the song, 2 = repeat the list</summary>
+    public int RepeatMode { get; private set; }
+
+    private bool _lastPlaying;
+    private int _errTries;
+    private System.Threading.Timer? _watch;
 
     /// <summary>Position or length changed (after a seek, for example)</summary>
     public event Action? TimelineChanged;
@@ -61,6 +74,21 @@ public sealed class MediaService
         _manager = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
         _manager.CurrentSessionChanged += (_, _) => Attach();
         Attach();
+
+        // Safety net: when a headset is plugged in or out, players and Windows switch sessions and states in
+        // ways that do not always raise an event. Every 3 seconds the real state is compared with what is shown.
+        _watch = new System.Threading.Timer(_ =>
+        {
+            try
+            {
+                var cur = _manager?.GetCurrentSession();
+                if (!ReferenceEquals(cur, _session)) { Attach(); return; }
+                if (_session == null) return;
+                bool now = _session.GetPlaybackInfo().PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
+                if (now != _lastPlaying) _ = RefreshAsync();
+            }
+            catch { }
+        }, null, 3000, 3000);
     }
 
     private void Attach()
@@ -102,6 +130,8 @@ public sealed class MediaService
             _artKey = "";
             _artBytes = null;
             _artTries = 0;
+            _lastPlaying = false;
+            SetModes(false, false, false, 0);
             Changed?.Invoke("", "", false, null);
             return;
         }
@@ -138,6 +168,10 @@ public sealed class MediaService
                 _artBytes = bytes;
             }
 
+            _errTries = 0;
+            _lastPlaying = playing;
+            SetModes(info.Controls.IsShuffleEnabled, info.IsShuffleActive == true,
+                     info.Controls.IsRepeatEnabled, info.AutoRepeatMode == MediaPlaybackAutoRepeatMode.Track ? 1 : info.AutoRepeatMode == MediaPlaybackAutoRepeatMode.List ? 2 : 0);
             Changed?.Invoke(title, artist, playing, _artBytes);
 
             // Still no cover: look again shortly (stops by itself when a newer event arrives)
@@ -149,8 +183,36 @@ public sealed class MediaService
         }
         catch
         {
-            // The session closed in the middle of reading: ignore
+            // The session changed in the middle of reading (headset plugged in, player closed ...): look again shortly
+            if (_errTries++ < 4)
+            {
+                await Task.Delay(600);
+                if (gen == _gen) _ = RefreshAsync();
+            }
         }
+    }
+
+    private void SetModes(bool shufSup, bool shuf, bool repSup, int rep)
+    {
+        if (shufSup == ShuffleSupported && shuf == ShuffleOn && repSup == RepeatSupported && rep == RepeatMode) return;
+        ShuffleSupported = shufSup;
+        ShuffleOn = shuf;
+        RepeatSupported = repSup;
+        RepeatMode = rep;
+        ModesChanged?.Invoke();
+    }
+
+    public async Task ShuffleAsync()
+    {
+        if (_session != null && ShuffleSupported) await _session.TryChangeShuffleActiveAsync(!ShuffleOn);
+    }
+
+    /// <summary>off -> repeat list -> repeat song -> off</summary>
+    public async Task RepeatAsync()
+    {
+        if (_session == null || !RepeatSupported) return;
+        var next = RepeatMode == 0 ? MediaPlaybackAutoRepeatMode.List : RepeatMode == 2 ? MediaPlaybackAutoRepeatMode.Track : MediaPlaybackAutoRepeatMode.None;
+        await _session.TryChangeAutoRepeatModeAsync(next);
     }
 
     private static async Task<byte[]?> ReadThumbnailAsync(IRandomAccessStreamReference? thumb)

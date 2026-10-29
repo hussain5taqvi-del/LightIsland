@@ -268,3 +268,11 @@ Hold the **apps key** (default **Caps Lock**; change it in Settings → General 
 - Music visuals (edge glow / music wallpaper) removed again: too heavy for the PC.
 - Equalizer follows the music on every sound device: it listens to all active outputs, so plugging a headset / Bluetooth hands-free in or out never freezes it.
 - A quick tap on the apps key (Caps Lock) or the ring key (X) still does its normal job; only a hold opens the ring.
+
+## 1.7.0
+- Rings open in every program (Chrome too): the apps ring and the file ring are tied to the held key, not to window focus.
+- Rings follow Liquid Glass (and the light/dark theme) with readable text.
+- Music page: working Shuffle and Repeat buttons (off / all / one) that show the real state of the player.
+- Equalizer: state is re-checked every 3 s, so plugging a headset in or out can never leave it frozen.
+- Auto update (Settings → Updates): small `LightIsland-update.zip` from GitHub Releases, checked twice a day.
+- Releases: installer, portable zip and update package are built by `.github/workflows/release.yml` when a tag like `v1.7.0` is pushed.

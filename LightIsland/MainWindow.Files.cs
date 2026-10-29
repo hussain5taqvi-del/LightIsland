@@ -40,6 +40,7 @@ public partial class MainWindow
         _sel.KeyReleased += () => _wheel?.ReleaseClose();
         _sel.Problem += msg => ShowHud("\uE7BA", msg, null, null, 2200);
         InitAppsRing();
+        InitUpdates();
 
         ApplyTaskSettings();
 
@@ -123,7 +124,8 @@ public partial class MainWindow
 
         bool IsPinned(ActionDef a) => a.Fmt != null && _s.RingPins.TryGetValue(pinKey, out List<string>? l) && l.Contains(a.Fmt);
 
-        var w = new RadialWindow(pages, label, icon, _s.Theme == "Light", accent, a => RunFileAction(a, files), TogglePin, IsPinned);
+        var w = new RadialWindow(pages, label, icon, _s.Theme == "Light", accent, a => RunFileAction(a, files), TogglePin, IsPinned,
+            false, "Let go to close", null, _s.Glass, _s.GlassOpacity, () => _sel != null && _sel.Held);
         _wheel = w;
         w.Closed += (_, _) =>
         {
