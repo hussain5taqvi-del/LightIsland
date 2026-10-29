@@ -263,3 +263,8 @@ Hold the **apps key** (default **Caps Lock**; change it in Settings → General 
 - Hold-key rings open every time: no stuck flag any more, an old ring can no longer block or toggle away a new hold, newest hold wins.
 - Smoother animations: they now run at the refresh rate of the screen (120/144 Hz screens too) and the island gets a short RAM headroom while it moves (the 30 MB cap is back a few seconds later).
 - Much smaller release: pandoc, ghostscript and HWP engines are only in the `build.bat full` pack; ffplay, language folders and import libs are removed.
+
+## 1.6.0 — Music visuals (Settings, both off by default)
+- **Music edge glow**: a soft light around the screen edges in the colors of the album cover, moving with the real loudness of the music. Clicks go through it; it hides under full-screen games and videos.
+- **Music wallpaper**: your desktop (behind the icons) becomes the song: blurred cover, moving colors, the cover, title and **time-synced lyrics** (LRCLIB, online; nothing is shown when a song has no lyrics). Pauses when a window covers the desktop. Needs the live video wallpaper to be off.
+- RAM: the island's cap is 100 MB only while one of these runs; it goes back to the normal cap (and the memory is trimmed) when switched off. The music page is untouched.
