@@ -56,9 +56,16 @@ Copy-Item (Join-Path $root '*') $fil -Recurse -Force
 Remove-Item (Join-Path $fil 'Filee.exe') -Force -ErrorAction SilentlyContinue
 
 # Engines: ffmpeg, pandoc, ghostscript, 7zip, rhwp (+ the heavy ones only with -Full)
-$only = @('rhwp', '7zip', 'ffmpeg', 'pandoc', 'ghostscript', 'vcruntime')
+# Lean by default: pandoc (220 MB), ghostscript and rhwp are only bundled with -Full
+$only = @('7zip', 'ffmpeg', 'vcruntime')
+if ($Full) { $only += @('rhwp', 'pandoc', 'ghostscript') }
 if ($Full) { $only += @('libreoffice', 'h2orestart', 'jre', 'calibre', 'tesseract') }
 & (Join-Path $here 'filee\build\fetch-engines.ps1') -Destination (Join-Path $fil 'engines') -Only $only -RuntimeTo $fil
+
+# Trim what the command line converter never uses: ffplay, language folders, import libs
+Get-ChildItem $fil -Recurse -Include 'ffplay.exe' -File -ErrorAction SilentlyContinue | Remove-Item -Force
+foreach ($l in 'da','de','es','fr','nl','pt','pt-BR','zh-CN','zh-TW') { Remove-Item (Join-Path $fil $l) -Recurse -Force -ErrorAction SilentlyContinue }
+Get-ChildItem $Release -Filter '*.lib' -File -ErrorAction SilentlyContinue | Remove-Item -Force
 
 Copy-Item (Join-Path $here 'filee\LICENSE') (Join-Path $fil 'LICENSE.Filee.txt') -Force
 Copy-Item (Join-Path $here 'filee\THIRD-PARTY-NOTICES.md') (Join-Path $fil 'THIRD-PARTY-NOTICES.md') -Force

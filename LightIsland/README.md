@@ -258,3 +258,8 @@ Hold the **apps key** (default **Caps Lock**; change it in Settings → General 
 - Caps Lock is swallowed while it is the apps key (it will not toggle capitals). With a modifier key (Ctrl, Alt ...) a shortcut such as Ctrl+C never opens the ring. A letter key as the apps key stops that letter from typing, so Caps Lock, Ctrl, Alt or an F-key work best.
 - The apps key and the file-ring key must differ. Settings → "Favorite apps ring" turns the whole thing off.
 - Your old favorites carry over. The island now has 6 pages (Media, Clock + Weather, Calendar, System, Downloads, Clipboard).
+
+## 1.5.1
+- Hold-key rings open every time: no stuck flag any more, an old ring can no longer block or toggle away a new hold, newest hold wins.
+- Smoother animations: they now run at the refresh rate of the screen (120/144 Hz screens too) and the island gets a short RAM headroom while it moves (the 30 MB cap is back a few seconds later).
+- Much smaller release: pandoc, ghostscript and HWP engines are only in the `build.bat full` pack; ffplay, language folders and import libs are removed.

@@ -111,7 +111,7 @@ public partial class MainWindow : Window
         _trimTimer.Tick += (_, _) =>
         {
             _trimTimer.Stop();
-            if (!_expanded) TrimMemory();
+            if (!_expanded) { MemoryGuard.Apply(MemoryGuard.LimitMb); TrimMemory(); }
         };
 
         // Equalizer: follows the real loudness of the music (runs only while playing and collapsed)
@@ -465,6 +465,7 @@ public partial class MainWindow : Window
         double th = expand ? _s.ExpandedHeight : _s.CollapsedHeight;
         double tr = expand ? _s.ExpandedRadius : CollapsedR;
 
+        MemoryGuard.Burst(); // headroom while it moves (the cap is back a few seconds after closing)
         if (expand)
         {
             _trimTimer.Stop();

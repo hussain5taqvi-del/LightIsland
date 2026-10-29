@@ -491,6 +491,9 @@ internal sealed class RadialWindow : Window
     }
 
     /// <summary>The ring key was let go: the ring disappears (unless it is working; then it closes when done).</summary>
+    public bool IsClosing => _closing;
+    public bool IsBusy => _busy;
+
     public void ReleaseClose()
     {
         if (_busy || _closing) return;

@@ -31,8 +31,10 @@ public partial class MainWindow
 
     private void ShowAppsRing()
     {
-        if (_appsWheel != null || _wheel != null) return;
         if (_sel != null && !_sel.AppsHeld) return; // let go before the ring could open
+        if (_appsWheel != null && !_appsWheel.IsClosing) return; // already open
+        if (_wheel != null && !_wheel.IsBusy) _wheel.CloseOnce();
+        MemoryGuard.Burst();
 
         var apps = new List<ActionDef>();
         foreach (string path in _s.FavoriteApps.ToArray())

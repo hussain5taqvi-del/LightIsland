@@ -88,13 +88,10 @@ public partial class MainWindow
 
     private void ShowWheel(string[] files)
     {
-        if (_wheel != null)
-        {
-            _wheel.CloseOnce();
-            _wheel = null;
-            return;
-        }
         if (_sel != null && !_sel.Held) return; // let go before the ring could open
+        if (_wheel != null && !_wheel.IsBusy) _wheel.CloseOnce(); // an old ring never blocks a new hold
+        _appsWheel?.CloseOnce();
+        MemoryGuard.Burst();
 
         string pinKey = RingPlan.PinKey(files);
         _s.RingPins.TryGetValue(pinKey, out List<string>? pinned);

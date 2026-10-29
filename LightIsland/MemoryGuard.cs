@@ -29,6 +29,21 @@ internal static class MemoryGuard
         }
     }
 
+    /// <summary>
+    /// While something animates the working set gets some headroom (a hard cap makes Windows page the animation's own
+    /// memory out and in again = stutter). The cap is put back by Apply() a few seconds later, when the island rests.
+    /// </summary>
+    public static void Burst()
+    {
+        try
+        {
+            if (LimitMb >= 96) return;
+            ulong max = (ulong)(LimitMb + 40) * 1024UL * 1024UL;
+            SetProcessWorkingSetSizeEx(GetCurrentProcess(), new UIntPtr(256UL * 1024UL), new UIntPtr(max), 0x2 | 0x4);
+        }
+        catch { }
+    }
+
     /// <summary>Collects garbage and gives the memory back to Windows.</summary>
     public static void Trim()
     {

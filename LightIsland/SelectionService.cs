@@ -22,7 +22,6 @@ internal sealed class SelectionService : IDisposable
     private readonly Dispatcher _ui;
     private readonly HookProc _proc;
     private IntPtr _hook;
-    private bool _busy;
 
     /// <summary>Raised on the UI thread. The list is never empty.</summary>
     public event Action<string[]>? Requested;
@@ -134,7 +133,7 @@ internal sealed class SelectionService : IDisposable
                         {
                             if (down)
                             {
-                                if (_appsHeld && now - _appsTick < 1500)
+                                if (_appsHeld && now - _appsTick < 700)
                                 {
                                     _appsTick = now;
                                     return amod ? CallNextHookEx(_hook, code, wParam, lParam) : (IntPtr)1;
@@ -144,10 +143,10 @@ internal sealed class SelectionService : IDisposable
                                     _appsHeld = true;
                                     _appsCancel = false;
                                     _appsTick = now;
-                                    long aid = ++_appsId;
+                                    long aid = Interlocked.Increment(ref _appsId);
                                     Task.Delay(HoldMs).ContinueWith(_ =>
                                     {
-                                        if (_appsHeld && !_appsCancel && _appsId == aid) _ui.BeginInvoke(new Action(() => AppsDown?.Invoke()));
+                                        if (_appsHeld && !_appsCancel && Interlocked.Read(ref _appsId) == aid) _ui.BeginInvoke(new Action(() => AppsDown?.Invoke()));
                                     });
                                     if (!amod) return (IntPtr)1;
                                 }
@@ -170,7 +169,7 @@ internal sealed class SelectionService : IDisposable
                     {
                         if (down)
                         {
-                            if (_held && now - _lastTick < 1200)
+                            if (_held && now - _lastTick < 700)
                             {
                                 _lastTick = now;
                                 return mod ? CallNextHookEx(_hook, code, wParam, lParam) : (IntPtr)1; // key repeat
@@ -183,10 +182,10 @@ internal sealed class SelectionService : IDisposable
                                 _held = true;
                                 _cancel = false;
                                 _lastTick = now;
-                                long id = ++_holdId;
+                                long id = Interlocked.Increment(ref _holdId);
                                 Task.Delay(HoldMs).ContinueWith(_ =>
                                 {
-                                    if (_held && !_cancel && _holdId == id) _ui.BeginInvoke(new Action(OnHold));
+                                    if (_held && !_cancel && Interlocked.Read(ref _holdId) == id) _ui.BeginInvoke(new Action(OnHold));
                                 });
                                 if (!mod) return (IntPtr)1;
                             }
@@ -222,8 +221,8 @@ internal sealed class SelectionService : IDisposable
 
     private async void OnHold()
     {
-        if (_busy || !_held) return;
-        _busy = true;
+        if (!_held) return;
+        long myId = Interlocked.Read(ref _holdId); // a newer hold replaces an older, slower read (nothing can get stuck)
         try
         {
             IntPtr fg = GetForegroundWindow();
@@ -240,7 +239,7 @@ internal sealed class SelectionService : IDisposable
             else
                 return; // some other program: nothing happens
 
-            if (!_held) return; // let go while the selection was being read
+            if (!_held || myId != Interlocked.Read(ref _holdId)) return; // let go (or held again) while the selection was being read
             files = files.Where(f => File.Exists(f) || Directory.Exists(f)).ToArray();
             if (files.Length > 0) Requested?.Invoke(files);
             else Problem?.Invoke("Select a file first");
@@ -251,7 +250,6 @@ internal sealed class SelectionService : IDisposable
         }
         finally
         {
-            _busy = false;
         }
     }
 

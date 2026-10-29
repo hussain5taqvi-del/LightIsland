@@ -26,6 +26,8 @@ public partial class App : Application
         // Hard RAM limit for the island itself (default 30 MB, see Settings.json "RamLimitMb")
         MemoryGuard.Apply(AppSettings.Load().RamLimitMb);
 
+        SmoothRender.Init();
+
         // Allow only one copy (so startup + manual start never create two islands)
         _mutex = new Mutex(true, @"Local\LightIsland_SingleInstance", out bool isFirst);
         if (!isFirst)
