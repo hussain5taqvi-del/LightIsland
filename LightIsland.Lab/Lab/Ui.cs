@@ -123,8 +123,8 @@ internal static class Ui
             Box = new TextBox
             {
                 Background = Panel,
-                Foreground = Text,
-                CaretBrush = Text,
+                Foreground = Ui.Text,
+                CaretBrush = Ui.Text,
                 BorderBrush = Line,
                 BorderThickness = new Thickness(1),
                 Padding = new Thickness(10, 8, 10, 8),
