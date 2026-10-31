@@ -652,6 +652,12 @@
                             <Grid.RenderTransform><TranslateTransform /></Grid.RenderTransform>
                             <Grid x:Name="ClipHost" />
                         </Grid>
+
+                        <!-- Page 11 (Lab): Toolbox. Built in code. -->
+                        <Grid x:Name="PageTool" Visibility="Collapsed">
+                            <Grid.RenderTransform><TranslateTransform /></Grid.RenderTransform>
+                            <Grid x:Name="ToolHost2" />
+                        </Grid>
                     </Grid>
 
                     <!-- Page dots -->

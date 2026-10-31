@@ -70,6 +70,7 @@ public partial class MainWindow : Window
         InitHud();
         InitExtras();
         InitTasks();
+        InitLab();
         ApplyCompactLayout();
         Island.SizeChanged += (_, _) => ApplyCorners();
         SeekHost.SizeChanged += (_, _) => { if (_expanded && !_seeking) RefreshProgress(); };

@@ -74,7 +74,12 @@ public sealed class AppSettings
     public List<AutoDeleteItem> AutoDelete { get; set; } = new();
     public int AppsKey { get; set; } = 0x14;           // hold to open the ring of favorite apps (virtual-key code, default Caps Lock)
     public bool AppsRing { get; set; } = true;
-    public bool AutoUpdate { get; set; } = false;       // checks GitHub Releases twice a day and installs small updates by itself
+    public bool AutoUpdate { get; set; } = false;
+    public bool AutoTheme { get; set; } = true;       // follow the Windows dark / light mode
+    public string AiProvider { get; set; } = "Anthropic";   // Anthropic or OpenAI-compatible
+    public string AiModel { get; set; } = "";
+    public string AiBaseUrl { get; set; } = "";
+    public string AiKeyProtected { get; set; } = "";  // the API key, encrypted for this Windows user (DPAPI)       // checks GitHub Releases twice a day and installs small updates by itself
     public bool PerfLog { get; set; }                  // writes perf.log with the timing of every animation (off by default)
     public int RingKey { get; set; } = 0x58;           // hold this key on a selected file: the ring is open until it is let go (virtual-key code, default X)
     public Dictionary<string, List<string>> RingPins { get; set; } = new();   // formats pinned to the front of the ring, per file type

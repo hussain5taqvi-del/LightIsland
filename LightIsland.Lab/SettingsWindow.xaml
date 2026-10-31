@@ -344,6 +344,12 @@
                         <CheckBox x:Name="StartupCheck" Style="{StaticResource Switch}" HorizontalAlignment="Right"
                                   Checked="Startup_Changed" Unchecked="Startup_Changed" />
                     </Grid>
+                    <Border Height="1" Background="{StaticResource Hairline}" Margin="16,0,0,0" />
+                    <Grid Margin="14,9">
+                        <TextBlock Text="Follow Windows dark / light" Foreground="White" VerticalAlignment="Center" />
+                        <CheckBox x:Name="AutoThemeCheck" Style="{StaticResource Switch}" HorizontalAlignment="Right"
+                                  Checked="AutoTheme_Changed" Unchecked="AutoTheme_Changed" />
+                    </Grid>
                 </StackPanel>
             </Border>
             <Button Content="Reset to defaults" Style="{StaticResource RowButton}" Margin="0,22,0,0"

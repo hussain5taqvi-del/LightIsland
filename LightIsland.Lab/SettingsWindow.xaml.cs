@@ -41,6 +41,7 @@ public partial class SettingsWindow : Window
         ShowKeyNames();
         VersionText.Text = "LightIsland Lab v" + Updater.Current;
         AutoUpdateCheck.IsChecked = _s.AutoUpdate;
+        AutoThemeCheck.IsChecked = _s.AutoTheme;
         RefreshUpdateUi();
         _main.UpdateStatusChanged += OnUpdateStatus;
         Closed += (_, _) => _main.UpdateStatusChanged -= OnUpdateStatus;
@@ -265,6 +266,8 @@ public partial class SettingsWindow : Window
     private void SetTheme(string name)
     {
         bool light = name == "Light";
+        _s.AutoTheme = false;
+        AutoThemeCheck.IsChecked = false;
         _s.Theme = name;
         _s.IslandColor = light ? "#F2F2F7" : "#000000";
         _s.TextColor = light ? "#1C1C1E" : "#FFFFFF";
@@ -489,6 +492,18 @@ public partial class SettingsWindow : Window
         if (!_ready) return;
         _s.AutoUpdate = AutoUpdateCheck.IsChecked == true;
         _s.Save();
+    }
+
+    private void AutoTheme_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_ready) return;
+        _s.AutoTheme = AutoThemeCheck.IsChecked == true;
+        _s.Save();
+        if (_s.AutoTheme)
+        {
+            _main.ApplyAutoThemeNow();
+            UpdateThemeUi();
+        }
     }
 
     private void Startup_Changed(object sender, RoutedEventArgs e)

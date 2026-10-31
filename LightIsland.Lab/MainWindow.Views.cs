@@ -17,7 +17,7 @@ namespace LightIsland;
 // Swap pages with the mouse wheel or the dots.
 public partial class MainWindow
 {
-    private const int ViewCount = 6;
+    private const int ViewCount = 7;
     private const int ViewMedia = 0, ViewClock = 1, ViewCal = 2, ViewSys = 3, ViewDl = 4, ViewClip = 5;
 
     private static readonly FontFamily GlyphFont = new("Segoe MDL2 Assets");
@@ -38,7 +38,7 @@ public partial class MainWindow
 
     private void InitViews()
     {
-        _pages = new[] { PageMedia, PageClock, PageCal, PageSys, PageDl, PageClip };
+        _pages = new[] { PageMedia, PageClock, PageCal, PageSys, PageDl, PageClip, PageTool };
 
         for (int i = 0; i < ViewCount; i++)
         {
@@ -174,6 +174,7 @@ public partial class MainWindow
             case ViewClock: UpdateClock(); break;
             case ViewDl: RenderDl(); break;
             case ViewClip: RenderClip(); break;
+            case ViewTool: RenderToolbox(); break;
         }
     }
 
