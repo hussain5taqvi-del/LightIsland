@@ -21,7 +21,7 @@ internal sealed class TimerTool : Window
     private readonly DispatcherTimer _tick = new() { Interval = TimeSpan.FromMilliseconds(200) };
     private readonly TextBlock _time = new() { FontSize = 56, FontWeight = FontWeights.Bold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, FontFamily = Ui.Font };
     private readonly TextBlock _modeTx = new() { FontSize = 13, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-    private readonly Path _arc = new() { StrokeThickness = 10, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round };
+    private readonly System.Windows.Shapes.Path _arc = new() { StrokeThickness = 10, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round };
     private readonly Ellipse _track = new() { StrokeThickness = 10, Width = 220, Height = 220 };
     private readonly TextBlock _rounds = new() { FontSize = 12, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly Ui.Status _st = new();
@@ -346,7 +346,7 @@ internal static class Ambient
 
     public static string EnsureFile(string name)
     {
-        string path = Path.Combine(Path.GetTempPath(), "LightIslandLab-ambient-" + name.Replace(' ', '_') + ".wav");
+        string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "LightIslandLab-ambient-" + name.Replace(' ', '_') + ".wav");
         if (File.Exists(path) && new FileInfo(path).Length > 100000) return path;
         float[] data = Make(name);
         string tmp = path + ".tmp";
