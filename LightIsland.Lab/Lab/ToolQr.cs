@@ -98,7 +98,7 @@ internal sealed class QrTool : Window
         };
     }
 
-    private static string Esc(string s) => s.Replace("\\", "\\\\").Replace(";", "\;").Replace(",", "\\,").Replace(":", "\\:").Replace("\"", "\\\"");
+    private static string Esc(string s) => s.Replace("\\", "\\\\").Replace(";", "\\;").Replace(",", "\\,").Replace(":", "\\:").Replace("\"", "\\\"");
 
     private string Payload()
     {
